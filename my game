@@ -1,0 +1,3221 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NINJA FRACTION JUMP: Petualangan Penjumlahan Pecahan</title>
+  <!-- Tailwind CSS untuk tata letak responsif & utilitas UI -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts ramah anak & mudah dibaca -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ==========================================================================
+       GAYA KUSTOM TEMA DESA NINJA JEPANG & KOMPONEN PECAHAN
+       ========================================================================== */
+    :root {
+      --ninja-red: #dc2626;
+      --ninja-gold: #f59e0b;
+      --ninja-ink: #1e293b;
+      --scroll-bg: #fffbeb;
+      --scroll-border: #b45309;
+      --bamboo-green: #15803d;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    input, textarea, select {
+      user-select: text;
+    }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    h1, h2, h3, .font-display {
+      font-family: 'Fredoka', sans-serif;
+    }
+
+    /* Tampilan Pecahan Bertumpuk (Pembilang di atas Penyebut) */
+    .frac-inline {
+      display: inline-flex;
+      align-items: center;
+      vertical-align: middle;
+      gap: 0.2em;
+      font-weight: 800;
+      line-height: 1;
+      margin: 0 0.12em;
+    }
+
+    .frac-whole {
+      font-size: 1.15em;
+    }
+
+    .frac-stack {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.88em;
+      line-height: 1.05;
+    }
+
+    .frac-num {
+      padding: 0 0.22em 0.08em;
+      border-bottom: 2.5px solid currentColor;
+      text-align: center;
+      min-width: 1.1em;
+    }
+
+    .frac-den {
+      padding: 0.08em 0.22em 0;
+      text-align: center;
+      min-width: 1.1em;
+    }
+
+    /* Tekstur Gulungan Perkamen Ninja */
+    .ninja-scroll {
+      background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+      border: 4px solid #b45309;
+      box-shadow:
+        0 12px 28px rgba(15, 23, 42, 0.35),
+        inset 0 0 0 3px #fde68a;
+      position: relative;
+    }
+
+    /* Tombol Bergaya Game Arcade 3D */
+    .btn-ninja {
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.15s ease;
+      box-shadow: 0 5px 0 rgba(15, 23, 42, 0.35);
+    }
+
+    .btn-ninja:hover:not(:disabled) {
+      transform: translateY(-2px);
+      filter: brightness(1.05);
+    }
+
+    .btn-ninja:active:not(:disabled) {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 rgba(15, 23, 42, 0.35);
+    }
+
+    .btn-ninja:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    /* Animasi Getar saat Jawaban Salah */
+    @keyframes gentleShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); }
+    }
+
+    .animate-shake {
+      animation: gentleShake 0.42s ease-in-out;
+    }
+
+    /* Animasi Melayang Halus untuk Maskot */
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .animate-float {
+      animation: floatSlow 2.8s ease-in-out infinite;
+    }
+
+    /* Animasi Pop-In Modal */
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .animate-pop {
+      animation: popIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* Kanvas Game Responsif */
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    /* Scrollbar Kustom untuk Panel Pembahasan & Chat AI */
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(254, 243, 199, 0.5);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #d97706;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-800">
+
+  <!-- ========================================================================
+       A. HALAMAN PEMBUKA (MAIN MENU SCREEN)
+       ======================================================================== -->
+  <section id="screen-menu" class="min-h-screen w-full flex flex-col items-center justify-center p-3 sm:p-6 relative overflow-hidden bg-gradient-to-b from-sky-300 via-amber-100 to-emerald-200">
+    <!-- Dekorasi Latar Belakang SVG Desa Ninja & Gunung Fuji -->
+    <svg class="absolute inset-0 w-full h-full pointer-events-none opacity-45" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <circle cx="980" cy="130" r="65" fill="#fde047" />
+      <polygon points="350,560 600,210 850,560" fill="#64748b" />
+      <polygon points="535,301 600,210 665,301 635,288 600,312 568,286" fill="#ffffff" />
+      <path d="M0,560 Q300,490 600,550 T1200,530 L1200,700 L0,700 Z" fill="#22c55e" />
+      <path d="M0,600 Q400,560 800,610 T1200,590 L1200,700 L0,700 Z" fill="#15803d" />
+    </svg>
+
+    <!-- Kontainer Utama Menu -->
+    <div class="relative z-10 w-full max-w-4xl ninja-scroll rounded-3xl p-5 sm:p-8 shadow-2xl">
+      <!-- Baris Atas: Status AI & Kontrol Suara -->
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div id="menu-ai-status-badge" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold bg-amber-200/80 text-amber-900 border border-amber-400">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+          <span>Mode Offline (Bank Soal Bawaan)</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="AudioFX.toggleMute()" id="menu-sound-btn" class="px-3 py-1.5 rounded-full bg-white/90 hover:bg-white border-2 border-amber-600 text-amber-900 font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm" title="Aktif/Nonaktifkan Suara">
+            <span id="menu-sound-icon">🔊</span>
+            <span class="hidden sm:inline">Suara Aktif</span>
+          </button>
+          <button type="button" onclick="UI.openModal('modal-ai-settings')" class="px-3 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm">
+            <span>🤖</span>
+            <span>Pengaturan AI</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Header Judul & Ilustrasi Karakter Ninja -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+        <!-- Kolom Ilustrasi Maskot Ninja -->
+        <div class="md:col-span-4 flex flex-col items-center justify-center">
+          <div class="w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-gradient-to-tr from-amber-300 via-rose-200 to-sky-200 border-4 border-amber-600 shadow-lg flex items-center justify-center animate-float relative">
+            <!-- Ilustrasi Vektor Ninja Lucu -->
+            <svg viewBox="0 0 160 160" class="w-32 h-32 sm:w-40 sm:h-40" aria-label="Karakter Ninja Pecahan">
+              <!-- Ujung Ikat Kepala Merah Berkibar -->
+              <path d="M35,54 Q12,42 8,58 Q22,64 38,62 Z" fill="#dc2626" />
+              <path d="M34,62 Q10,66 14,80 Q28,74 40,68 Z" fill="#b91c1c" />
+              <!-- Badan Ninja -->
+              <rect x="52" y="96" width="56" height="42" rx="18" fill="#1e293b" />
+              <!-- Sabuk Merah -->
+              <rect x="52" y="114" width="56" height="9" fill="#dc2626" />
+              <!-- Pedang/Gulungan di Punggung -->
+              <rect x="102" y="42" width="10" height="68" rx="4" transform="rotate(24 102 42)" fill="#92400e" />
+              <rect x="108" y="34" width="12" height="10" rx="2" transform="rotate(24 108 34)" fill="#f59e0b" />
+              <!-- Kepala Ninja -->
+              <circle cx="80" cy="64" r="36" fill="#1e293b" />
+              <!-- Area Wajah -->
+              <rect x="52" y="53" width="56" height="22" rx="11" fill="#fed7aa" />
+              <!-- Ikat Kepala Merah -->
+              <rect x="43" y="43" width="74" height="13" rx="6" fill="#dc2626" />
+              <rect x="70" y="42" width="20" height="15" rx="3" fill="#94a3b8" />
+              <circle cx="80" cy="49.5" r="3" fill="#dc2626" />
+              <!-- Mata Semangat -->
+              <circle cx="66" cy="64" r="5" fill="#0f172a" />
+              <circle cx="67.5" cy="62.5" r="1.8" fill="#ffffff" />
+              <circle cx="94" cy="64" r="5" fill="#0f172a" />
+              <circle cx="95.5" cy="62.5" r="1.8" fill="#ffffff" />
+              <!-- Pipi Merona -->
+              <ellipse cx="57" cy="69" rx="4" ry="2.2" fill="#fb7185" opacity="0.75" />
+              <ellipse cx="103" cy="69" rx="4" ry="2.2" fill="#fb7185" opacity="0.75" />
+              <!-- Tangan Memegang Gulungan Matematika -->
+              <circle cx="48" cy="112" r="9" fill="#1e293b" />
+              <circle cx="112" cy="112" r="9" fill="#1e293b" />
+              <rect x="58" y="103" width="44" height="18" rx="5" fill="#fef3c7" stroke="#b45309" stroke-width="2.5" />
+              <text x="80" y="116" text-anchor="middle" font-size="11" font-weight="bold" fill="#b45309">½ + ¼</text>
+            </svg>
+          </div>
+
+          <!-- Kredit Pembuat Game (Sesuai Permintaan User) -->
+          <div class="mt-3 px-4 py-2 rounded-2xl bg-white/95 border-2 border-amber-500 shadow-sm text-center">
+            <p class="text-[11px] uppercase tracking-wider font-extrabold text-amber-700">Pengembang & Kreator</p>
+            <p class="text-sm sm:text-base font-display font-bold text-slate-900">Santi Prafita Ratnaningsih</p>
+          </div>
+        </div>
+
+        <!-- Kolom Judul, Input Nama, dan Pilihan Level -->
+        <div class="md:col-span-8 flex flex-col">
+          <div class="inline-block self-start px-3 py-1 rounded-full bg-red-600 text-white text-xs font-extrabold tracking-wide uppercase mb-2 shadow-sm">
+            Matematika SD Kelas 5 – 6
+          </div>
+          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-slate-900 leading-tight drop-shadow-sm">
+            NINJA <span class="text-red-600">FRACTION</span> JUMP
+          </h1>
+          <p class="text-base sm:text-lg font-bold text-amber-900 mt-1">
+            Petualangan Penjumlahan Pecahan di Desa Ninja!
+          </p>
+          <p class="text-xs sm:text-sm text-slate-700 mt-1.5 leading-relaxed">
+            Bantu Ninja Muda berlari, mengumpulkan koin emas, dan melompati rintangan dengan memecahkan tantangan penjumlahan pecahan bersama <strong>AI Ninja Sensei</strong>!
+          </p>
+
+          <!-- Input Nama Pemain -->
+          <div class="mt-4 bg-white/80 p-3 rounded-2xl border-2 border-amber-400 flex flex-col sm:flex-row sm:items-center gap-2">
+            <label for="player-name-input" class="text-xs sm:text-sm font-extrabold text-amber-950 whitespace-nowrap">
+              🥷 Nama Ninja Muda:
+            </label>
+            <input
+              type="text"
+              id="player-name-input"
+              maxlength="20"
+              placeholder="Masukkan namamu..."
+              value="Ninja Muda"
+              class="w-full px-3 py-1.5 rounded-xl border-2 border-amber-300 focus:border-red-500 focus:outline-none font-bold text-slate-800 bg-white"
+            />
+          </div>
+
+          <!-- Pilihan Tingkat Kesulitan / Level -->
+          <div class="mt-4">
+            <p class="text-xs sm:text-sm font-extrabold text-amber-950 mb-2">Pilih Tingkat Tantangan:</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5" id="level-selector-grid">
+              <!-- Level 1 -->
+              <button type="button" onclick="Game.selectLevel(1)" data-level-btn="1" class="level-card text-left p-3 rounded-2xl border-3 border-red-600 bg-white shadow-sm transition-all flex items-start justify-between gap-2 ring-2 ring-red-400">
+                <div>
+                  <span class="inline-block px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[11px] font-extrabold">LEVEL 1</span>
+                  <h3 class="font-display font-bold text-slate-900 text-sm sm:text-base mt-0.5">Penyebut Sama</h3>
+                  <p class="text-xs text-slate-600">Contoh: 1/5 + 2/5, 3/8 + 1/8</p>
+                </div>
+                <span id="badge-level-1" class="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-lg">Siap</span>
+              </button>
+
+              <!-- Level 2 -->
+              <button type="button" onclick="Game.selectLevel(2)" data-level-btn="2" class="level-card text-left p-3 rounded-2xl border-2 border-amber-300 bg-white/90 hover:bg-white shadow-sm transition-all flex items-start justify-between gap-2">
+                <div>
+                  <span class="inline-block px-2 py-0.5 rounded-md bg-sky-100 text-sky-800 text-[11px] font-extrabold">LEVEL 2</span>
+                  <h3 class="font-display font-bold text-slate-900 text-sm sm:text-base mt-0.5">Penyebut Berbeda</h3>
+                  <p class="text-xs text-slate-600">Contoh: 1/2 + 1/4, 1/3 + 1/6</p>
+                </div>
+                <span id="badge-level-2" class="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-lg">Siap</span>
+              </button>
+
+              <!-- Level 3 -->
+              <button type="button" onclick="Game.selectLevel(3)" data-level-btn="3" class="level-card text-left p-3 rounded-2xl border-2 border-amber-300 bg-white/90 hover:bg-white shadow-sm transition-all flex items-start justify-between gap-2">
+                <div>
+                  <span class="inline-block px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-[11px] font-extrabold">LEVEL 3</span>
+                  <h3 class="font-display font-bold text-slate-900 text-sm sm:text-base mt-0.5">Pecahan Campuran</h3>
+                  <p class="text-xs text-slate-600">Contoh: 1 1/2 + 1/2, 2 1/4 + 1 1/2</p>
+                </div>
+                <span id="badge-level-3" class="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-lg">Siap</span>
+              </button>
+
+              <!-- Level 4 -->
+              <button type="button" onclick="Game.selectLevel(4)" data-level-btn="4" class="level-card text-left p-3 rounded-2xl border-2 border-amber-300 bg-white/90 hover:bg-white shadow-sm transition-all flex items-start justify-between gap-2">
+                <div>
+                  <span class="inline-block px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[11px] font-extrabold">LEVEL 4</span>
+                  <h3 class="font-display font-bold text-slate-900 text-sm sm:text-base mt-0.5">Tantangan Ninja Master</h3>
+                  <p class="text-xs text-slate-600">3 Pecahan, Hasil &gt; 1 &amp; Soal Cerita</p>
+                </div>
+                <span id="badge-level-4" class="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-lg">Siap</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tombol Aksi Utama -->
+          <div class="mt-5 flex flex-wrap items-center gap-3">
+            <button type="button" onclick="Game.startLevel(Game.selectedLevel)" class="btn-ninja flex-1 min-w-[200px] py-3.5 px-6 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 text-white font-display font-bold text-lg sm:text-xl flex items-center justify-center gap-2 border-2 border-red-800">
+              <span>⚔️</span>
+              <span>Mulai Petualangan</span>
+            </button>
+
+            <button type="button" onclick="UI.openModal('modal-instructions')" class="btn-ninja py-3.5 px-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-display font-bold text-sm sm:text-base flex items-center gap-1.5 border-2 border-amber-600">
+              <span>📜</span>
+              <span>Petunjuk</span>
+            </button>
+
+            <button type="button" onclick="UI.openSenseiChat()" class="btn-ninja py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-display font-bold text-sm sm:text-base flex items-center gap-1.5 border-2 border-emerald-800">
+              <span>🧙‍♂️</span>
+              <span>Tanya Sensei</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       B. HALAMAN PERMAINAN (GAMEPLAY SCREEN)
+       ======================================================================== -->
+  <section id="screen-game" class="hidden min-h-screen w-full flex flex-col bg-slate-900 overflow-hidden">
+    <!-- Panel HUD Atas -->
+    <header class="w-full bg-slate-900/95 text-white px-2.5 sm:px-5 py-2 border-b-2 border-amber-500/60 z-20 shrink-0">
+      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+        <!-- Info Pemain, Nyawa, Skor, Koin -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div class="px-2.5 py-1 rounded-xl bg-slate-800 border border-slate-700 flex items-center gap-1.5">
+            <span class="text-sm">🥷</span>
+            <span id="hud-player-name" class="font-bold text-xs sm:text-sm text-amber-300 truncate max-w-[100px] sm:max-w-[140px]">Ninja Muda</span>
+            <span class="text-[11px] px-1.5 py-0.5 rounded bg-red-600 font-extrabold" id="hud-level-badge">Lv.1</span>
+          </div>
+
+          <!-- Nyawa (3 Kesempatan) -->
+          <div class="px-2.5 py-1 rounded-xl bg-slate-800 border border-slate-700 flex items-center gap-1" title="Nyawa Tersisa">
+            <span id="hud-hearts" class="text-sm sm:text-base tracking-widest">❤️❤️❤️</span>
+          </div>
+
+          <!-- Skor -->
+          <div class="px-2.5 py-1 rounded-xl bg-slate-800 border border-slate-700 flex items-center gap-1.5">
+            <span class="text-xs text-slate-400 font-bold">SKOR:</span>
+            <span id="hud-score" class="font-display font-bold text-sm sm:text-base text-emerald-400">0</span>
+          </div>
+
+          <!-- Koin Emas -->
+          <div class="px-2.5 py-1 rounded-xl bg-slate-800 border border-slate-700 flex items-center gap-1">
+            <span class="text-sm">🪙</span>
+            <span id="hud-coins" class="font-display font-bold text-sm sm:text-base text-amber-400">0</span>
+          </div>
+        </div>
+
+        <!-- Statistik Benar/Salah, Akurasi & Tombol Kontrol HUD -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div class="hidden md:flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-800 border border-slate-700 text-xs font-bold">
+            <span class="text-emerald-400">✔ <span id="hud-correct">0</span></span>
+            <span class="text-slate-500">|</span>
+            <span class="text-rose-400">✘ <span id="hud-wrong">0</span></span>
+            <span class="text-slate-500">|</span>
+            <span class="text-sky-300">Akurasi: <span id="hud-accuracy">100%</span></span>
+          </div>
+
+          <!-- Toggle Auto-Lari -->
+          <button type="button" id="hud-autorun-btn" onclick="Game.toggleAutoRun()" class="px-2.5 py-1.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-xs font-bold border border-emerald-400/50" title="Ninja otomatis berlari menuju rintangan berikutnya">
+            🏃 Auto-Lari: ON
+          </button>
+
+          <!-- Tanya AI Ninja Sensei -->
+          <button type="button" onclick="UI.openSenseiChat()" class="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1 border border-indigo-400/50" title="Tanya AI Ninja Sensei">
+            <span>🧙‍♂️</span>
+            <span class="hidden sm:inline">Sensei</span>
+          </button>
+
+          <!-- Tombol Suara -->
+          <button type="button" onclick="AudioFX.toggleMute()" id="hud-sound-btn" class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-sm" title="Suara">
+            🔊
+          </button>
+
+          <!-- Tombol Jeda (Pause) -->
+          <button type="button" onclick="Game.pauseGame()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs sm:text-sm flex items-center gap-1 shadow" title="Jeda Permainan (Esc)">
+            <span>⏸️</span>
+            <span class="hidden sm:inline">Jeda</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Bilah Progres Menuju Garis Finis -->
+      <div class="max-w-7xl mx-auto mt-2 flex items-center gap-2">
+        <span class="text-[11px] font-bold text-amber-300 whitespace-nowrap">🏁 Finis:</span>
+        <div class="w-full h-2.5 bg-slate-700 rounded-full overflow-hidden border border-slate-600 relative">
+          <div id="hud-progress-bar" class="h-full bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <span id="hud-progress-text" class="text-[11px] font-extrabold text-slate-300 whitespace-nowrap">0/5 Rintangan</span>
+      </div>
+    </header>
+
+    <!-- Area Arena Kanvas 2D + Panel Soal Mengambang -->
+    <main class="relative flex-1 w-full flex flex-col justify-between overflow-hidden">
+      <!-- Kanvas Dunia Platformer -->
+      <div id="canvas-wrapper" class="relative flex-1 w-full min-h-[260px] sm:min-h-[360px]">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Notifikasi Cepat Mengambang di Kanvas (Poin, Bonus, Pesan) -->
+        <div id="canvas-toast" class="pointer-events-none hidden absolute top-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-full bg-slate-900/90 text-amber-300 border-2 border-amber-400 font-display font-bold text-sm sm:text-base shadow-lg">
+          +15 Poin! Lompatan Super!
+        </div>
+
+        <!-- PANEL SOAL PENJUMLAHAN PECAHAN (Muncul saat mendekati rintangan) -->
+        <div id="question-overlay" class="hidden absolute inset-0 z-30 bg-slate-950/45 backdrop-blur-[2px] flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto">
+          <div id="question-card" class="w-full max-w-xl ninja-scroll rounded-3xl p-4 sm:p-6 animate-pop my-auto">
+            <!-- Header Gulungan Soal -->
+            <div class="flex items-center justify-between gap-2 pb-2.5 border-b-2 border-amber-300">
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-1 rounded-xl bg-red-600 text-white font-display font-bold text-xs sm:text-sm" id="q-obstacle-label">
+                  🚧 Rintangan 1/5
+                </span>
+                <span id="q-source-tag" class="px-2 py-0.5 rounded-lg bg-amber-200 text-amber-900 text-[11px] font-extrabold">
+                  Gulungan Ninja
+                </span>
+              </div>
+
+              <!-- Timer Bonus Kecepatan (+5 Poin) -->
+              <div class="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-amber-400">
+                <span class="text-xs">⚡</span>
+                <span class="text-xs font-extrabold text-amber-900" id="q-bonus-timer">Bonus +5: 20d</span>
+              </div>
+            </div>
+
+            <!-- Konteks Soal Cerita (Jika ada, terutama di Level 4) -->
+            <div id="q-story-box" class="hidden mt-3 p-3 rounded-2xl bg-white/90 border-2 border-amber-300 text-slate-800 text-xs sm:text-sm font-bold leading-relaxed">
+            </div>
+
+            <!-- Ekspresi Matematika Penjumlahan Pecahan -->
+            <div class="mt-3 p-3 sm:p-4 rounded-2xl bg-white border-2 border-amber-400 shadow-inner text-center">
+              <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Selesaikan Penjumlahan Pecahan Berikut:</p>
+              <div id="q-math-expression" class="text-2xl sm:text-3xl md:text-4xl font-display font-bold text-slate-900 flex items-center justify-center flex-wrap gap-2 py-1">
+                <!-- Diisi dinamis oleh JS -->
+              </div>
+            </div>
+
+            <!-- Pesan Umpan Balik Ramah & Kotak Petunjuk Bertahap -->
+            <div id="q-feedback-banner" class="hidden mt-3 p-3 rounded-2xl bg-rose-100 border-2 border-rose-400 text-rose-900 text-xs sm:text-sm font-bold flex items-start gap-2">
+              <span class="text-lg leading-none">🦊</span>
+              <div id="q-feedback-text">Hampir benar, Ninja Muda! Mari samakan penyebutnya terlebih dahulu.</div>
+            </div>
+
+            <div id="q-hint-box" class="hidden mt-2.5 p-3 rounded-2xl bg-sky-50 border-2 border-sky-400 text-sky-950 text-xs sm:text-sm">
+              <div class="font-extrabold text-sky-800 flex items-center gap-1 mb-0.5">
+                <span>💡 Petunjuk Ninja Sensei:</span>
+              </div>
+              <div id="q-hint-text" class="font-semibold leading-relaxed"></div>
+            </div>
+
+            <!-- 4 Pilihan Jawaban Besar & Ramah Sentuh -->
+            <div id="q-options-grid" class="mt-3.5 grid grid-cols-2 gap-2.5 sm:gap-3">
+              <!-- Tombol opsi diisi dinamis oleh JS -->
+            </div>
+
+            <!-- Tombol Bantuan Petunjuk & Tanya AI Sensei -->
+            <div class="mt-3.5 pt-2.5 border-t border-amber-300 flex flex-wrap items-center justify-between gap-2">
+              <button type="button" id="btn-request-hint" onclick="Game.showProgressiveHint()" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm">
+                <span>💡</span>
+                <span>Minta Petunjuk</span>
+              </button>
+
+              <button type="button" onclick="UI.openSenseiChat(true)" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm">
+                <span>🧙‍♂️</span>
+                <span>Tanya AI Sensei</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kontrol Sentuh Ponsel & Tablet (Responsif, Tidak Bertumpuk) -->
+      <div id="mobile-controls" class="w-full bg-slate-900/95 border-t-2 border-slate-700 px-4 py-2.5 flex items-center justify-between gap-4 z-20 shrink-0">
+        <!-- Tombol Arah Kiri & Kanan -->
+        <div class="flex items-center gap-3">
+          <button type="button" id="touch-left" class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-800 active:bg-amber-500 active:text-slate-950 text-white border-2 border-slate-600 flex items-center justify-center text-2xl font-bold shadow-md" aria-label="Gerak ke Kiri">
+            ◀
+          </button>
+          <button type="button" id="touch-right" class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-800 active:bg-amber-500 active:text-slate-950 text-white border-2 border-slate-600 flex items-center justify-center text-2xl font-bold shadow-md" aria-label="Gerak ke Kanan">
+            ▶
+          </button>
+        </div>
+
+        <!-- Petunjuk Singkat Keyboard di Tengah (Desktop) -->
+        <div class="hidden lg:flex items-center gap-4 text-xs text-slate-400 font-bold">
+          <span>[A / ◀] Kiri</span>
+          <span>[D / ▶] Kanan</span>
+          <span>[Spasi / ▲] Lompat Ambil Koin</span>
+          <span>[Esc] Jeda</span>
+        </div>
+
+        <!-- Tombol Lompat Berukuran Besar -->
+        <button type="button" id="touch-jump" class="px-6 sm:px-8 h-14 sm:h-16 rounded-2xl bg-gradient-to-b from-red-500 to-red-700 active:from-amber-400 active:to-amber-600 text-white font-display font-bold text-base sm:text-lg border-2 border-red-300/60 shadow-lg flex items-center gap-2" aria-label="Lompat">
+          <span>⬆️</span>
+          <span>LOMPAT</span>
+        </button>
+      </div>
+    </main>
+  </section>
+
+  <!-- ========================================================================
+       C. HALAMAN / MODAL PEMBAHASAN (STEP-BY-STEP EXPLANATION + VISUAL BAR)
+       ======================================================================== -->
+  <div id="modal-explanation" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+    <div class="w-full max-w-2xl ninja-scroll rounded-3xl p-5 sm:p-7 animate-pop my-auto">
+      <!-- Status Jawaban Benar atau Salah -->
+      <div id="exp-status-banner" class="p-3.5 rounded-2xl bg-emerald-100 border-2 border-emerald-500 text-emerald-950 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <span id="exp-status-icon" class="text-3xl">🎉</span>
+          <div>
+            <h2 id="exp-status-title" class="font-display font-bold text-lg sm:text-xl">Luar Biasa, Ninja Muda!</h2>
+            <p id="exp-status-subtitle" class="text-xs sm:text-sm font-bold opacity-90">+10 Poin + 5 Bonus Kecepatan!</p>
+          </div>
+        </div>
+        <span id="exp-points-pill" class="px-3 py-1 rounded-full bg-emerald-600 text-white font-display font-bold text-sm">+15 Poin</span>
+      </div>
+
+      <!-- Ringkasan Soal & Jawaban Benar -->
+      <div class="mt-4 p-3 rounded-2xl bg-white border-2 border-amber-300 flex flex-wrap items-center justify-center gap-2 text-lg sm:text-2xl font-display font-bold text-slate-900" id="exp-equation-summary">
+      </div>
+
+      <!-- Visualisasi Pecahan Menggunakan Batang Pecahan (Fraction Bars SVG) -->
+      <div class="mt-4 p-3.5 rounded-2xl bg-white border-2 border-sky-300">
+        <p class="text-xs font-extrabold uppercase tracking-wider text-sky-800 mb-2 flex items-center gap-1.5">
+          <span>📊</span>
+          <span>Visualisasi Batang Pecahan:</span>
+        </p>
+        <div id="exp-visual-container" class="w-full overflow-x-auto">
+          <!-- SVG Batang Pecahan dirender oleh JS -->
+        </div>
+      </div>
+
+      <!-- Penjelasan Langkah demi Langkah -->
+      <div class="mt-4 p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-400">
+        <p class="text-xs font-extrabold uppercase tracking-wider text-amber-900 mb-1.5 flex items-center gap-1.5">
+          <span>📜</span>
+          <span>Langkah Penyelesaian Ninja Sensei:</span>
+        </p>
+        <ol id="exp-steps-list" class="list-decimal list-inside space-y-1.5 text-xs sm:text-sm font-bold text-slate-800 leading-relaxed">
+        </ol>
+      </div>
+
+      <!-- Tombol Lanjutkan Petualangan -->
+      <div class="mt-5 flex justify-end">
+        <button type="button" onclick="Game.continueAfterExplanation()" class="btn-ninja w-full sm:w-auto py-3.5 px-7 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 text-white font-display font-bold text-base sm:text-lg border-2 border-emerald-800 flex items-center justify-center gap-2">
+          <span>🥷</span>
+          <span>Lanjutkan Petualangan</span>
+          <span>➔</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       D. HALAMAN HASIL (RESULT / VICTORY / GAME OVER SCREEN)
+       ======================================================================== -->
+  <section id="screen-result" class="hidden min-h-screen w-full flex items-center justify-center p-3 sm:p-6 bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900">
+    <div class="w-full max-w-3xl ninja-scroll rounded-3xl p-5 sm:p-8 animate-pop">
+      <!-- Header Status Level Selesai / Game Over -->
+      <div class="text-center">
+        <div id="res-hero-emoji" class="text-5xl sm:text-6xl mb-2">🏆</div>
+        <h2 id="res-title" class="text-2xl sm:text-4xl font-display font-bold text-slate-900">Misi Ninja Selesai!</h2>
+        <p id="res-subtitle" class="text-sm sm:text-base font-bold text-amber-900 mt-1">Hebat sekali, Ninja Muda! Kamu telah menaklukkan rintangan pecahan.</p>
+      </div>
+
+      <!-- Kartu Gelar Ninja Berdasarkan Akurasi Soal -->
+      <div class="mt-5 p-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 border-2 border-amber-700 text-center shadow-md">
+        <p class="text-xs font-extrabold uppercase tracking-widest text-amber-950">Gelar Kehormatan yang Diperoleh</p>
+        <p id="res-rank-title" class="text-2xl sm:text-3xl font-display font-bold text-slate-950 mt-0.5">🌟 Ninja Master Pecahan</p>
+        <p id="res-rank-note" class="text-xs font-bold text-amber-950 mt-0.5">Dihitung berdasarkan akurasi jawaban soal matematikamu</p>
+      </div>
+
+      <!-- Grid Statistik Akhir -->
+      <div class="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div class="p-3 rounded-2xl bg-white border-2 border-amber-300 text-center">
+          <p class="text-xs font-bold text-slate-500">Skor Akhir</p>
+          <p id="res-score" class="text-xl sm:text-2xl font-display font-bold text-emerald-600">0</p>
+        </div>
+        <div class="p-3 rounded-2xl bg-white border-2 border-amber-300 text-center">
+          <p class="text-xs font-bold text-slate-500">Total Koin</p>
+          <p id="res-coins" class="text-xl sm:text-2xl font-display font-bold text-amber-500">🪙 0</p>
+        </div>
+        <div class="p-3 rounded-2xl bg-white border-2 border-amber-300 text-center">
+          <p class="text-xs font-bold text-slate-500">Akurasi Jawaban</p>
+          <p id="res-accuracy" class="text-xl sm:text-2xl font-display font-bold text-sky-600">0%</p>
+        </div>
+        <div class="p-3 rounded-2xl bg-white border-2 border-amber-300 text-center">
+          <p class="text-xs font-bold text-slate-500">Jawaban Benar</p>
+          <p id="res-correct" class="text-xl sm:text-2xl font-display font-bold text-emerald-600">0</p>
+        </div>
+        <div class="p-3 rounded-2xl bg-white border-2 border-amber-300 text-center">
+          <p class="text-xs font-bold text-slate-500">Jawaban Salah</p>
+          <p id="res-wrong" class="text-xl sm:text-2xl font-display font-bold text-rose-600">0</p>
+        </div>
+        <div class="p-3 rounded-2xl bg-white border-2 border-amber-300 text-center">
+          <p class="text-xs font-bold text-slate-500">Waktu Bermain</p>
+          <p id="res-time" class="text-xl sm:text-2xl font-display font-bold text-indigo-600">00:00</p>
+        </div>
+      </div>
+
+      <!-- Rekomendasi Latihan dari AI Ninja Sensei / Analisis Lokal -->
+      <div class="mt-5 p-4 rounded-2xl bg-indigo-50 border-2 border-indigo-300">
+        <div class="flex items-center justify-between gap-2 mb-1.5">
+          <h3 class="font-display font-bold text-indigo-950 text-sm sm:text-base flex items-center gap-1.5">
+            <span>🧙‍♂️</span>
+            <span>Catatan & Rekomendasi Latihan Ninja Sensei</span>
+          </h3>
+          <span id="res-ai-badge" class="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-900">Analisis Cerdas</span>
+        </div>
+        <p id="res-recommendation" class="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
+          Sedang menyiapkan evaluasi belajarmu...
+        </p>
+      </div>
+
+      <!-- Tombol Navigasi Akhir -->
+      <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+        <button type="button" id="btn-next-level" onclick="Game.startNextLevel()" class="btn-ninja py-3 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-display font-bold text-base border-2 border-emerald-800 flex items-center gap-2">
+          <span>🚀</span>
+          <span>Level Berikutnya</span>
+        </button>
+
+        <button type="button" onclick="Game.startLevel(Game.currentLevel)" class="btn-ninja py-3 px-6 rounded-2xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-display font-bold text-base border-2 border-amber-600 flex items-center gap-2">
+          <span>🔄</span>
+          <span>Main Lagi</span>
+        </button>
+
+        <button type="button" onclick="Game.returnToMenu()" class="btn-ninja py-3 px-6 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-display font-bold text-base border-2 border-slate-900 flex items-center gap-2">
+          <span>🏯</span>
+          <span>Kembali ke Menu</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       MODAL JEDA (PAUSE MENU)
+       ======================================================================== -->
+  <div id="modal-pause" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-md ninja-scroll rounded-3xl p-6 text-center animate-pop">
+      <div class="text-4xl mb-2">⏸️</div>
+      <h2 class="text-2xl font-display font-bold text-slate-900">Permainan Dijeda</h2>
+      <p class="text-xs sm:text-sm font-bold text-amber-900 mt-1">Tarik napas sejenak, Ninja Muda!</p>
+
+      <!-- Pengaturan Volume Suara -->
+      <div class="mt-4 p-3 rounded-2xl bg-white border-2 border-amber-300 flex items-center justify-between gap-3">
+        <span class="text-xs sm:text-sm font-extrabold text-slate-800">🔊 Volume Efek Suara</span>
+        <input type="range" id="volume-slider" min="0" max="100" value="70" oninput="AudioFX.setVolume(this.value)" class="w-32 accent-red-600 cursor-pointer" />
+      </div>
+
+      <div class="mt-5 flex flex-col gap-2.5">
+        <button type="button" onclick="Game.resumeGame()" class="btn-ninja w-full py-3 rounded-2xl bg-emerald-600 text-white font-display font-bold text-base border-2 border-emerald-800">
+          ▶️ Lanjutkan Permainan
+        </button>
+        <button type="button" onclick="Game.restartLevelFromPause()" class="btn-ninja w-full py-3 rounded-2xl bg-amber-400 text-amber-950 font-display font-bold text-base border-2 border-amber-600">
+          🔄 Ulangi Level Ini
+        </button>
+        <button type="button" onclick="Game.returnToMenu()" class="btn-ninja w-full py-3 rounded-2xl bg-slate-700 text-white font-display font-bold text-base border-2 border-slate-900">
+          🏯 Kembali ke Menu Utama
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL PETUNJUK BERMAIN (HOW TO PLAY)
+       ======================================================================== -->
+  <div id="modal-instructions" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+    <div class="w-full max-w-2xl ninja-scroll rounded-3xl p-5 sm:p-7 animate-pop my-auto">
+      <div class="flex items-center justify-between border-b-2 border-amber-300 pb-3">
+        <h2 class="text-xl sm:text-2xl font-display font-bold text-slate-900 flex items-center gap-2">
+          <span>📜</span>
+          <span>Panduan Petualangan Ninja</span>
+        </h2>
+        <button type="button" onclick="UI.closeModal('modal-instructions')" class="w-9 h-9 rounded-full bg-red-600 text-white font-bold flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="mt-4 space-y-3 text-xs sm:text-sm text-slate-800 font-semibold leading-relaxed">
+        <div class="p-3 rounded-2xl bg-white border border-amber-300">
+          <h3 class="font-display font-bold text-red-700 text-base mb-1">🎯 Cara Bermain</h3>
+          <ul class="list-disc list-inside space-y-1">
+            <li>Tekan <strong>Mulai Petualangan</strong> untuk menjalankan ninja di desa Jepang.</li>
+            <li>Lompat untuk mengumpulkan <strong>koin emas</strong> di udara dan di atas platform bambu.</li>
+            <li>Saat mendekati <strong>rintangan</strong> (jurang, batu segel, atau gerbang), gulungan soal penjumlahan pecahan akan muncul.</li>
+            <li>Pilih jawaban yang paling sederhana dan tepat! Jawaban benar membuat ninja melompati rintangan dengan keren (<strong>+10 poin</strong> + <strong>+5 bonus cepat</strong>).</li>
+            <li>Kamu memiliki <strong>3 nyawa (❤️❤️❤️)</strong>. Jika salah, Ninja Sensei akan memberi petunjuk ramah agar kamu bisa belajar dan mencoba lagi.</li>
+          </ul>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="p-3 rounded-2xl bg-white border border-amber-300">
+            <h3 class="font-display font-bold text-indigo-700 text-base mb-1">⌨️ Kontrol Komputer / Laptop</h3>
+            <ul class="space-y-1">
+              <li><strong>Panah Kanan / D:</strong> Bergerak ke kanan</li>
+              <li><strong>Panah Kiri / A:</strong> Bergerak ke kiri</li>
+              <li><strong>Spasi / Panah Atas / W:</strong> Melompat</li>
+              <li><strong>Esc:</strong> Menjeda permainan</li>
+              <li><strong>Klik Mouse:</strong> Memilih jawaban</li>
+            </ul>
+          </div>
+
+          <div class="p-3 rounded-2xl bg-white border border-amber-300">
+            <h3 class="font-display font-bold text-emerald-700 text-base mb-1">📱 Kontrol Ponsel / Tablet</h3>
+            <ul class="space-y-1">
+              <li>Gunakan tombol <strong>◀</strong> dan <strong>▶</strong> di kiri bawah layar untuk bergerak.</li>
+              <li>Tekan tombol besar <strong>LOMPAT</strong> di kanan bawah untuk melompat.</li>
+              <li>Sentuh langsung kartu jawaban pecahan saat soal muncul.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-amber-100 border border-amber-400">
+          <h3 class="font-display font-bold text-amber-950 text-base mb-1">🏅 Tingkatan Gelar Ninja (Berdasarkan Akurasi Soal)</h3>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs font-extrabold mt-1">
+            <div class="p-2 rounded-xl bg-white">0–49%<br><span class="text-slate-600">Ninja Pemula</span></div>
+            <div class="p-2 rounded-xl bg-white">50–69%<br><span class="text-sky-700">Ninja Terampil</span></div>
+            <div class="p-2 rounded-xl bg-white">70–89%<br><span class="text-emerald-700">Ninja Hebat</span></div>
+            <div class="p-2 rounded-xl bg-white">90–100%<br><span class="text-red-600">Ninja Master Pecahan</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-5 text-right">
+        <button type="button" onclick="UI.closeModal('modal-instructions')" class="btn-ninja py-2.5 px-6 rounded-2xl bg-red-600 text-white font-display font-bold">
+          Siap Berpetualang!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL PENGATURAN AI NINJA SENSEI (OPSIONAL)
+       ======================================================================== -->
+  <div id="modal-ai-settings" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+    <div class="w-full max-w-xl ninja-scroll rounded-3xl p-5 sm:p-7 animate-pop my-auto">
+      <div class="flex items-center justify-between border-b-2 border-amber-300 pb-3">
+        <h2 class="text-xl sm:text-2xl font-display font-bold text-slate-900 flex items-center gap-2">
+          <span>🤖</span>
+          <span>Pengaturan AI Ninja Sensei</span>
+        </h2>
+        <button type="button" onclick="UI.closeModal('modal-ai-settings')" class="w-9 h-9 rounded-full bg-red-600 text-white font-bold flex items-center justify-center">✕</button>
+      </div>
+
+      <p class="mt-3 text-xs sm:text-sm text-slate-700 font-semibold leading-relaxed">
+        Game ini <strong>100% dapat dimainkan secara offline</strong> menggunakan bank soal bawaan. Jika Anda memiliki API Key AI (misalnya Google Gemini API), aktifkan di bawah ini agar AI Ninja Sensei dapat membuat soal cerita baru dan menjawab pertanyaan siswa secara langsung.
+      </p>
+
+      <div class="mt-4 space-y-3 text-xs sm:text-sm">
+        <div>
+          <label for="ai-api-key" class="block font-extrabold text-slate-800 mb-1">API Key AI (Opsional):</label>
+          <input type="password" id="ai-api-key" placeholder="Masukkan API Key AI Anda (contoh: AIzaSy...)" class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 bg-white font-mono text-xs focus:border-indigo-500 focus:outline-none" />
+          <p class="text-[11px] text-slate-500 mt-1">🔒 Privasi terjaga: Tidak ada data pribadi siswa yang dikirim ke layanan AI. Untuk penggunaan sekolah/publik, gunakan server proxy.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="ai-model" class="block font-extrabold text-slate-800 mb-1">Model AI:</label>
+            <input type="text" id="ai-model" value="gemini-3-flash-preview" class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 bg-white font-mono text-xs focus:border-indigo-500 focus:outline-none" />
+          </div>
+          <div>
+            <label for="ai-provider" class="block font-extrabold text-slate-800 mb-1">Format Endpoint:</label>
+            <select id="ai-provider" onchange="AISensei.onProviderChange()" class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 bg-white font-bold text-xs focus:border-indigo-500 focus:outline-none">
+              <option value="gemini">Google Gemini REST API</option>
+              <option value="openai">OpenAI-Compatible (/chat/completions)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label for="ai-endpoint" class="block font-extrabold text-slate-800 mb-1">URL Endpoint AI:</label>
+          <input type="text" id="ai-endpoint" value="https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent" class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 bg-white font-mono text-xs focus:border-indigo-500 focus:outline-none" />
+        </div>
+
+        <div id="ai-test-result" class="hidden p-2.5 rounded-xl text-xs font-bold"></div>
+      </div>
+
+      <div class="mt-5 flex flex-wrap items-center justify-between gap-2">
+        <button type="button" onclick="AISensei.testConnection()" id="btn-test-ai" class="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs sm:text-sm">
+          🔌 Uji Koneksi AI
+        </button>
+
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="AISensei.clearConfig()" class="px-3.5 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs sm:text-sm">
+            Reset Offline
+          </button>
+          <button type="button" onclick="AISensei.saveConfig()" class="btn-ninja px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-display font-bold text-sm">
+            💾 Simpan Pengaturan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL TANYA AI NINJA SENSEI (VIRTUAL MATH TUTOR CHAT)
+       ======================================================================== -->
+  <div id="modal-sensei-chat" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+    <div class="w-full max-w-lg ninja-scroll rounded-3xl p-4 sm:p-6 flex flex-col max-h-[88vh] animate-pop">
+      <div class="flex items-center justify-between border-b-2 border-amber-300 pb-2.5 shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xl border-2 border-amber-400">🧙‍♂️</div>
+          <div>
+            <h2 class="font-display font-bold text-base sm:text-lg text-slate-900">AI Ninja Sensei</h2>
+            <p id="sensei-chat-status" class="text-[11px] font-bold text-amber-800">Guru Matematika Virtual SD</p>
+          </div>
+        </div>
+        <button type="button" onclick="UI.closeModal('modal-sensei-chat')" class="w-8 h-8 rounded-full bg-red-600 text-white font-bold flex items-center justify-center">✕</button>
+      </div>
+
+      <!-- Riwayat Percakapan -->
+      <div id="sensei-chat-messages" class="flex-1 overflow-y-auto my-3 space-y-2.5 pr-1 min-h-[200px]">
+        <div class="p-3 rounded-2xl bg-white border border-amber-300 text-xs sm:text-sm font-semibold text-slate-800">
+          <strong>Ninja Sensei:</strong> Salam, Ninja Muda! Tanyakan apa saja tentang penjumlahan pecahan. Misalnya: <em>"Mengapa 1/2 + 1/4 hasilnya 3/4?"</em> atau <em>"Bagaimana cara menyamakan penyebut?"</em>
+        </div>
+      </div>
+
+      <!-- Pertanyaan Cepat -->
+      <div class="flex flex-wrap gap-1.5 mb-2.5 shrink-0">
+        <button type="button" onclick="AISensei.askQuick('Jelaskan cara menyelesaikan soal yang sedang muncul!')" class="px-2.5 py-1 rounded-full bg-amber-200 hover:bg-amber-300 text-amber-950 text-[11px] font-extrabold">
+          💡 Jelaskan soal ini
+        </button>
+        <button type="button" onclick="AISensei.askQuick('Mengapa 1/2 + 1/4 hasilnya 3/4?')" class="px-2.5 py-1 rounded-full bg-amber-200 hover:bg-amber-300 text-amber-950 text-[11px] font-extrabold">
+          ❓ Mengapa 1/2 + 1/4 = 3/4?
+        </button>
+        <button type="button" onclick="AISensei.askQuick('Bagaimana cara menjumlahkan pecahan campuran?')" class="px-2.5 py-1 rounded-full bg-amber-200 hover:bg-amber-300 text-amber-950 text-[11px] font-extrabold">
+          📘 Tips pecahan campuran
+        </button>
+      </div>
+
+      <!-- Input Pertanyaan Siswa -->
+      <form onsubmit="AISensei.handleChatSubmit(event)" class="flex items-center gap-2 shrink-0">
+        <input type="text" id="sensei-chat-input" placeholder="Tulis pertanyaan pecahamu di sini..." class="flex-1 px-3.5 py-2.5 rounded-xl border-2 border-amber-400 bg-white text-xs sm:text-sm font-bold focus:border-indigo-600 focus:outline-none" />
+        <button type="submit" id="sensei-send-btn" class="btn-ninja px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-display font-bold text-xs sm:text-sm">
+          Kirim
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       SKRIP LOGIKA MATEMATIKA PECAHAN, AUDIO, AI SENSEI, DAN GAME ENGINE
+       ======================================================================== -->
+  <script>
+    "use strict";
+
+    /**
+     * ========================================================================
+     * 1. MODUL ARITMATIKA PECAHAN EKSAK (INTEGER-BASED RATIONAL MATH)
+     * Menghindari kesalahan pembulatan floating-point & memastikan semua pecahan
+     * selalu tereduksi ke bentuk paling sederhana.
+     * ========================================================================
+     */
+    class Fraction {
+      constructor(num, den = 1) {
+        if (!Number.isInteger(num) || !Number.isInteger(den) || den === 0) {
+          throw new Error("Pembilang dan penyebut harus bilangan bulat dengan penyebut != 0");
+        }
+        if (den < 0) {
+          num = -num;
+          den = -den;
+        }
+        if (num === 0) {
+          this.num = 0;
+          this.den = 1;
+        } else {
+          const divisor = Fraction.gcd(Math.abs(num), Math.abs(den));
+          this.num = num / divisor;
+          this.den = den / divisor;
+        }
+      }
+
+      static gcd(a, b) {
+        a = Math.abs(Math.round(a));
+        b = Math.abs(Math.round(b));
+        while (b !== 0) {
+          const t = b;
+          b = a % b;
+          a = t;
+        }
+        return a || 1;
+      }
+
+      static lcm(a, b) {
+        if (a === 0 || b === 0) return 0;
+        return Math.abs((a * b) / Fraction.gcd(a, b));
+      }
+
+      static lcmArray(arr) {
+        return arr.reduce((acc, val) => Fraction.lcm(acc, val), 1);
+      }
+
+      static fromMixed(whole, num, den) {
+        const sign = whole < 0 ? -1 : 1;
+        const absWhole = Math.abs(whole);
+        return new Fraction(sign * (absWhole * den + num), den);
+      }
+
+      /**
+       * Mengurai string seperti "3/4", "1 1/2", atau "2" menjadi objek Fraction
+       */
+      static parse(str) {
+        if (str instanceof Fraction) return new Fraction(str.num, str.den);
+        const clean = String(str).trim().replace(/\s+/g, " ");
+        if (!clean) return null;
+
+        // Format pecahan campuran: "1 1/2"
+        const mixedMatch = clean.match(/^(-?\d+)\s+(\d+)\/(\d+)$/);
+        if (mixedMatch) {
+          const w = parseInt(mixedMatch[1], 10);
+          const n = parseInt(mixedMatch[2], 10);
+          const d = parseInt(mixedMatch[3], 10);
+          if (d === 0) return null;
+          return Fraction.fromMixed(w, n, d);
+        }
+
+        // Format pecahan biasa: "3/4"
+        const fracMatch = clean.match(/^(-?\d+)\/(\d+)$/);
+        if (fracMatch) {
+          const n = parseInt(fracMatch[1], 10);
+          const d = parseInt(fracMatch[2], 10);
+          if (d === 0) return null;
+          return new Fraction(n, d);
+        }
+
+        // Format bilangan bulat: "2"
+        const intMatch = clean.match(/^(-?\d+)$/);
+        if (intMatch) {
+          return new Fraction(parseInt(intMatch[1], 10), 1);
+        }
+
+        return null;
+      }
+
+      add(other) {
+        const commonDen = Fraction.lcm(this.den, other.den);
+        const newNum = this.num * (commonDen / this.den) + other.num * (commonDen / other.den);
+        return new Fraction(newNum, commonDen);
+      }
+
+      equals(other) {
+        return other instanceof Fraction && this.num === other.num && this.den === other.den;
+      }
+
+      toMixedParts() {
+        const whole = Math.trunc(this.num / this.den);
+        const rem = Math.abs(this.num % this.den);
+        return { whole, num: rem, den: this.den };
+      }
+
+      toPlainString(preferMixed = true) {
+        if (this.den === 1) return `${this.num}`;
+        if (preferMixed && Math.abs(this.num) > this.den) {
+          const { whole, num, den } = this.toMixedParts();
+          return num === 0 ? `${whole}` : `${whole} ${num}/${den}`;
+        }
+        return `${this.num}/${this.den}`;
+      }
+
+      toHTML(preferMixed = true) {
+        if (this.den === 1) {
+          return `<span class="frac-inline"><span class="frac-whole">${this.num}</span></span>`;
+        }
+        if (preferMixed && Math.abs(this.num) > this.den) {
+          const { whole, num, den } = this.toMixedParts();
+          if (num === 0) {
+            return `<span class="frac-inline"><span class="frac-whole">${whole}</span></span>`;
+          }
+          return `<span class="frac-inline"><span class="frac-whole">${whole}</span><span class="frac-stack"><span class="frac-num">${num}</span><span class="frac-den">${den}</span></span></span>`;
+        }
+        return `<span class="frac-inline"><span class="frac-stack"><span class="frac-num">${this.num}</span><span class="frac-den">${this.den}</span></span></span>`;
+      }
+    }
+
+    /**
+     * ========================================================================
+     * 2. GENERATOR & BANK SOAL PENJUMLAHAN PECAHAN SD (LEVEL 1 - 4)
+     * Menghasilkan soal tervalidasi, pilihan pengecoh masuk akal, petunjuk
+     * bertahap, dan penjelasan langkah demi langkah.
+     * ========================================================================
+     */
+    const QuestionEngine = {
+      usedSignatures: new Set(),
+
+      resetSession() {
+        this.usedSignatures.clear();
+      },
+
+      /**
+       * Membangun objek soal lengkap dari daftar suku pecahan (operands)
+       * yang dijamin valid secara matematis.
+       */
+      buildValidatedProblem({ level, operandStrings, story = "", customHints = null, source = "Lokal" }) {
+        const operands = operandStrings.map(s => ({
+          raw: s,
+          frac: Fraction.parse(s)
+        }));
+
+        if (operands.some(o => !o.frac)) {
+          throw new Error("Format pecahan tidak valid dalam pembuatan soal.");
+        }
+
+        // Hitung jumlah eksak
+        const answer = operands.reduce((acc, item) => acc.add(item.frac), new Fraction(0, 1));
+        const preferMixed = level >= 3 || answer.num > answer.den;
+
+        // Hitung KPK penyebut untuk langkah penyelesaian
+        const denoms = operands.map(o => o.frac.den);
+        const kpk = Fraction.lcmArray(denoms);
+        const allSameDenom = denoms.every(d => d === denoms[0]);
+
+        // Susun petunjuk bertahap
+        const hints = customHints && customHints.length >= 2 ? customHints : this.generateHints(operands, kpk, allSameDenom, answer, preferMixed);
+
+        // Susun penjelasan langkah demi langkah
+        const steps = this.generateSteps(operands, kpk, allSameDenom, answer, preferMixed);
+
+        // Hasilkan 4 pilihan jawaban unik yang masuk akal
+        const options = this.generateDistractors(operands, answer, preferMixed);
+
+        return {
+          level,
+          operands,
+          answer,
+          preferMixed,
+          kpk,
+          allSameDenom,
+          story,
+          hints,
+          steps,
+          options,
+          source
+        };
+      },
+
+      generateHints(operands, kpk, allSameDenom, answer, preferMixed) {
+        if (allSameDenom) {
+          return [
+            `Penyebut semua pecahan sudah sama, yaitu ${kpk}. Kamu cukup menjumlahkan bagian pembilangnya saja!`,
+            `Jumlahkan pembilang: ${operands.map(o => o.frac.num).join(" + ")} dengan penyebut tetap ${kpk}, lalu sederhanakan jika bisa.`
+          ];
+        }
+        const eqList = operands.map(o => {
+          const factor = kpk / o.frac.den;
+          return `${o.raw} = ${o.frac.num * factor}/${kpk}`;
+        }).join(", ");
+        return [
+          `Penyebutnya berbeda (${operands.map(o => o.frac.den).join(" dan ")}). Samakan penyebutnya ke KPK yaitu ${kpk}.`,
+          `Ubah pecahan menjadi berpenyebut ${kpk}: ${eqList}. Setelah itu jumlahkan pembilangnya!`
+        ];
+      },
+
+      generateSteps(operands, kpk, allSameDenom, answer, preferMixed) {
+        const steps = [];
+        const exprText = operands.map(o => o.raw).join(" + ");
+
+        if (allSameDenom) {
+          steps.push(`Perhatikan soal: ${exprText}. Semua pecahan sudah memiliki penyebut yang sama, yaitu ${kpk}.`);
+          const rawSumNum = operands.reduce((sum, o) => sum + o.frac.num, 0);
+          steps.push(`Jumlahkan pembilangnya: (${operands.map(o => o.frac.num).join(" + ")}) / ${kpk} = ${rawSumNum}/${kpk}.`);
+          if (rawSumNum !== answer.num || kpk !== answer.den) {
+            steps.push(`Sederhanakan pecahan ${rawSumNum}/${kpk} menjadi bentuk paling sederhana: ${answer.toPlainString(preferMixed)}.`);
+          } else {
+            steps.push(`Hasil akhirnya adalah ${answer.toPlainString(preferMixed)}.`);
+          }
+        } else {
+          steps.push(`Penyebut pecahan berbeda (${operands.map(o => o.frac.den).join(", ")}). Cari KPK dari penyebut tersebut, yaitu ${kpk}.`);
+          const convertedParts = operands.map(o => {
+            const mult = kpk / o.frac.den;
+            return `${o.raw} = (${o.frac.num}×${mult})/(${o.frac.den}×${mult}) = ${o.frac.num * mult}/${kpk}`;
+          });
+          steps.push(`Ubah setiap pecahan ke penyebut ${kpk}: ${convertedParts.join("; ")}.`);
+          const rawSumNum = operands.reduce((sum, o) => sum + o.frac.num * (kpk / o.frac.den), 0);
+          steps.push(`Jumlahkan pembilang yang sudah sama penyebutnya: (${operands.map(o => o.frac.num * (kpk / o.frac.den)).join(" + ")}) / ${kpk} = ${rawSumNum}/${kpk}.`);
+          if (rawSumNum !== answer.num || kpk !== answer.den) {
+            steps.push(`Sederhanakan ${rawSumNum}/${kpk} menjadi bentuk paling sederhana: ${answer.toPlainString(preferMixed)}.`);
+          } else {
+            steps.push(`Bentuk paling sederhana dari hasil penjumlahan adalah ${answer.toPlainString(preferMixed)}.`);
+          }
+        }
+        return steps;
+      },
+
+      /**
+       * Membuat 4 pilihan jawaban (1 benar + 3 pengecoh edukatif)
+       */
+      generateDistractors(operands, answer, preferMixed) {
+        const candidates = [
+          { frac: answer, isCorrect: true, misconception: null }
+        ];
+
+        const addCandidate = (frac, misconception) => {
+          if (!frac || frac.num <= 0) return;
+          if (!candidates.some(c => c.frac.equals(frac))) {
+            candidates.push({ frac, isCorrect: false, misconception });
+          }
+        };
+
+        // Pengecoh 1: Kesalahan umum siswa SD -> menjumlahkan penyebut secara langsung
+        const sumNumRaw = operands.reduce((s, o) => s + o.frac.num, 0);
+        const sumDenRaw = operands.reduce((s, o) => s + o.frac.den, 0);
+        addCandidate(new Fraction(sumNumRaw, sumDenRaw), "menjumlahkan_penyebut");
+
+        // Pengecoh 2: Menjumlahkan pembilang tanpa mengubah penyebut terbesar
+        const maxDen = Math.max(...operands.map(o => o.frac.den));
+        addCandidate(new Fraction(sumNumRaw, maxDen), "lupa_menyamakan_penyebut");
+
+        // Pengecoh 3 & 4: Variasi pembilang +/- 1 atau +/- 2 pada penyebut jawaban
+        const offsets = [1, -1, 2, -2, 3];
+        for (const off of offsets) {
+          if (candidates.length >= 4) break;
+          if (answer.num + off > 0) {
+            addCandidate(new Fraction(answer.num + off, answer.den), "hitung_pembilang");
+          }
+        }
+
+        // Pengaman jika masih kurang dari 4 opsi unik
+        let extraDen = answer.den + 1;
+        while (candidates.length < 4) {
+          addCandidate(new Fraction(answer.num, extraDen), "lainnya");
+          extraDen++;
+        }
+
+        // Acak urutan pilihan (Fisher-Yates)
+        const finalFour = candidates.slice(0, 4).map(c => ({
+          frac: c.frac,
+          labelPlain: c.frac.toPlainString(preferMixed),
+          labelHTML: c.frac.toHTML(preferMixed),
+          isCorrect: c.isCorrect,
+          misconception: c.misconception
+        }));
+
+        for (let i = finalFour.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [finalFour[i], finalFour[j]] = [finalFour[j], finalFour[i]];
+        }
+
+        return finalFour;
+      },
+
+      /**
+       * Bank soal kurasi & generator prosedural offline sesuai Level 1-4
+       */
+      getOfflineProblem(level) {
+        const banks = {
+          1: [
+            { operands: ["1/5", "2/5"], story: "" },
+            { operands: ["2/7", "3/7"], story: "" },
+            { operands: ["3/8", "1/8"], story: "" },
+            { operands: ["2/9", "4/9"], story: "" },
+            { operands: ["3/10", "4/10"], story: "" },
+            { operands: ["1/6", "4/6"], story: "" },
+            { operands: ["5/12", "4/12"], story: "" },
+            { operands: ["2/11", "6/11"], story: "" }
+          ],
+          2: [
+            { operands: ["1/2", "1/4"], story: "" },
+            { operands: ["1/3", "1/6"], story: "" },
+            { operands: ["2/5", "1/10"], story: "" },
+            { operands: ["1/2", "1/3"], story: "" },
+            { operands: ["3/4", "1/8"], story: "" },
+            { operands: ["2/3", "1/4"], story: "" },
+            { operands: ["1/6", "1/2"], story: "" },
+            { operands: ["3/10", "2/5"], story: "" }
+          ],
+          3: [
+            { operands: ["1 1/2", "1/2"], story: "" },
+            { operands: ["1 1/3", "2/3"], story: "" },
+            { operands: ["2 1/4", "1 1/2"], story: "" },
+            { operands: ["1 2/5", "1 1/5"], story: "" },
+            { operands: ["2 1/6", "1 1/3"], story: "" },
+            { operands: ["1 3/4", "1/2"], story: "" },
+            { operands: ["2 1/3", "1 1/6"], story: "" },
+            { operands: ["1 2/5", "1 3/10"], story: "" }
+          ],
+          4: [
+            {
+              operands: ["1/2", "1/4", "1/8"],
+              story: "Latihan Tiga Gulungan: Gabungkan ketiga takaran ramuan energi ninja berikut!"
+            },
+            {
+              operands: ["3/4", "2/3"],
+              story: "Rina membawa 3/4 liter air minum dan Budi membawa 2/3 liter air minum untuk latihan di dojo. Berapa liter total air minum mereka?"
+            },
+            {
+              operands: ["2 2/3", "1 1/4"],
+              story: "Panjang bambu pertama 2 2/3 meter dan bambu kedua 1 1/4 meter. Berapa meter panjang gabungan kedua bambu tersebut?"
+            },
+            {
+              operands: ["1/3", "1/6", "1/2"],
+              story: "Akira berlari 1/3 km di pagi hari, 1/6 km di siang hari, dan 1/2 km di sore hari. Berapa km total jarak tempuh Akira?"
+            },
+            {
+              operands: ["4/5", "1/2"],
+              story: "Ibu membeli 4/5 kg tepung beras dan 1/2 kg gula merah untuk membuat mochi desa ninja. Berapa kg berat seluruh belanjaan Ibu?"
+            },
+            {
+              operands: ["1 3/5", "2 1/2"],
+              story: "Tantangan Master: Jumlahkan dua pecahan campuran berpenyebut berbeda berikut!"
+            }
+          ]
+        };
+
+        const pool = banks[level] || banks[1];
+        // Cari soal yang belum dipakai pada sesi ini
+        const unused = pool.filter(item => !this.usedSignatures.has(item.operands.join("+")));
+        let chosen;
+        if (unused.length > 0) {
+          chosen = unused[Math.floor(Math.random() * unused.length)];
+        } else {
+          // Buat variasi prosedural dinamis jika bank kurasi sudah habis terpakai
+          chosen = this.generateProceduralItem(level);
+        }
+
+        this.usedSignatures.add(chosen.operands.join("+"));
+        return this.buildValidatedProblem({
+          level,
+          operandStrings: chosen.operands,
+          story: chosen.story,
+          source: "Gulungan Bawaan"
+        });
+      },
+
+      generateProceduralItem(level) {
+        if (level === 1) {
+          const den = [5, 6, 7, 8, 9, 10, 12][Math.floor(Math.random() * 7)];
+          const n1 = Math.floor(Math.random() * (den - 2)) + 1;
+          const n2 = Math.floor(Math.random() * (den - n1)) + 1;
+          return { operands: [`${n1}/${den}`, `${n2}/${den}`], story: "" };
+        }
+        if (level === 2) {
+          const pairs = [[2, 4], [2, 6], [3, 6], [3, 9], [4, 8], [5, 10], [2, 3], [3, 4]];
+          const [d1, d2] = pairs[Math.floor(Math.random() * pairs.length)];
+          const n1 = Math.floor(Math.random() * (d1 - 1)) + 1;
+          const n2 = Math.floor(Math.random() * (d2 - 1)) + 1;
+          return { operands: [`${n1}/${d1}`, `${n2}/${d2}`], story: "" };
+        }
+        if (level === 3) {
+          const w1 = Math.floor(Math.random() * 2) + 1;
+          const w2 = Math.floor(Math.random() * 2) + 1;
+          const pairs = [[2, 4], [3, 6], [4, 4], [5, 10]];
+          const [d1, d2] = pairs[Math.floor(Math.random() * pairs.length)];
+          return { operands: [`${w1} 1/${d1}`, `${w2} 1/${d2}`], story: "" };
+        }
+        return {
+          operands: ["2/3", "3/4"],
+          story: "Tantangan Cepat Ninja Master: Hitung jumlah kedua pecahan berikut!"
+        };
+      }
+    };
+
+    /**
+     * ========================================================================
+     * 3. MODUL EFEK SUARA SINTETIS (WEB AUDIO API - TANPA FILE EKSTERNAL)
+     * ========================================================================
+     */
+    const AudioFX = {
+      ctx: null,
+      muted: false,
+      volume: 0.7,
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            this.ctx = new AudioCtx();
+          }
+        }
+        if (this.ctx && this.ctx.state === "suspended") {
+          this.ctx.resume().catch(() => {});
+        }
+      },
+
+      setVolume(val) {
+        this.volume = Math.max(0, Math.min(1, Number(val) / 100));
+        this.updateButtons();
+      },
+
+      toggleMute() {
+        this.init();
+        this.muted = !this.muted;
+        this.updateButtons();
+      },
+
+      updateButtons() {
+        const icon = this.muted || this.volume === 0 ? "🔇" : "🔊";
+        const menuIcon = document.getElementById("menu-sound-icon");
+        const hudBtn = document.getElementById("hud-sound-btn");
+        if (menuIcon) menuIcon.textContent = icon;
+        if (hudBtn) hudBtn.textContent = icon;
+      },
+
+      playTone(freq, type = "sine", duration = 0.15, delay = 0, slideTo = null) {
+        if (this.muted || this.volume <= 0) return;
+        this.init();
+        if (!this.ctx) return;
+
+        try {
+          const now = this.ctx.currentTime + delay;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, now);
+          if (slideTo) {
+            osc.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
+          }
+
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.22 * this.volume, now + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + duration + 0.02);
+        } catch (e) {
+          // Abaikan jika browser membatasi autoplay audio
+        }
+      },
+
+      playJump() {
+        this.playTone(260, "triangle", 0.22, 0, 620);
+      },
+
+      playCoin() {
+        this.playTone(880, "sine", 0.09, 0);
+        this.playTone(1318.5, "sine", 0.16, 0.07);
+      },
+
+      playCorrect() {
+        // Tangga nada pentatonik Jepang ceria
+        this.playTone(523.25, "triangle", 0.14, 0);
+        this.playTone(659.25, "triangle", 0.14, 0.09);
+        this.playTone(783.99, "triangle", 0.14, 0.18);
+        this.playTone(1046.5, "triangle", 0.28, 0.27);
+      },
+
+      playWrong() {
+        this.playTone(220, "sawtooth", 0.18, 0, 150);
+        this.playTone(175, "sawtooth", 0.24, 0.15, 130);
+      },
+
+      playVictory() {
+        const notes = [523.25, 587.33, 659.25, 783.99, 1046.5];
+        notes.forEach((n, idx) => this.playTone(n, "triangle", 0.2, idx * 0.11));
+      }
+    };
+
+    /**
+     * ========================================================================
+     * 4. SISTEM AI NINJA SENSEI (OPSIONAL DENGAN VALIDASI MATEMATIKA JS)
+     * ========================================================================
+     */
+    const AISensei = {
+      config: {
+        apiKey: "",
+        provider: "gemini",
+        model: "gemini-3-flash-preview",
+        endpoint: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"
+      },
+      isConnected: false,
+      aiQuestionQueue: [],
+
+      loadConfig() {
+        try {
+          const saved = localStorage.getItem("ninja_fraction_ai_cfg");
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            this.config = { ...this.config, ...parsed };
+          }
+        } catch (e) {}
+
+        document.getElementById("ai-api-key").value = this.config.apiKey || "";
+        document.getElementById("ai-provider").value = this.config.provider || "gemini";
+        document.getElementById("ai-model").value = this.config.model || "gemini-3-flash-preview";
+        document.getElementById("ai-endpoint").value = this.config.endpoint || "";
+        this.updateStatusBadge();
+      },
+
+      onProviderChange() {
+        const provider = document.getElementById("ai-provider").value;
+        const modelInput = document.getElementById("ai-model");
+        const endpointInput = document.getElementById("ai-endpoint");
+        if (provider === "gemini") {
+          modelInput.value = "gemini-3-flash-preview";
+          endpointInput.value = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
+        } else {
+          modelInput.value = "gpt-4o-mini";
+          endpointInput.value = "https://api.openai.com/v1/chat/completions";
+        }
+      },
+
+      saveConfig() {
+        this.config.apiKey = document.getElementById("ai-api-key").value.trim();
+        this.config.provider = document.getElementById("ai-provider").value;
+        this.config.model = document.getElementById("ai-model").value.trim() || "gemini-3-flash-preview";
+        this.config.endpoint = document.getElementById("ai-endpoint").value.trim();
+
+        if (this.config.provider === "gemini" && this.config.endpoint.includes("/models/")) {
+          this.config.endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${this.config.model}:generateContent`;
+          document.getElementById("ai-endpoint").value = this.config.endpoint;
+        }
+
+        try {
+          localStorage.setItem("ninja_fraction_ai_cfg", JSON.stringify(this.config));
+        } catch (e) {}
+
+        this.isConnected = Boolean(this.config.apiKey);
+        this.aiQuestionQueue = [];
+        this.updateStatusBadge();
+        UI.closeModal("modal-ai-settings");
+      },
+
+      clearConfig() {
+        this.config.apiKey = "";
+        this.isConnected = false;
+        this.aiQuestionQueue = [];
+        document.getElementById("ai-api-key").value = "";
+        try {
+          localStorage.removeItem("ninja_fraction_ai_cfg");
+        } catch (e) {}
+        this.updateStatusBadge();
+        const box = document.getElementById("ai-test-result");
+        box.className = "p-2.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 border border-amber-400";
+        box.textContent = "Mode AI dinonaktifkan. Game berjalan menggunakan bank soal lokal.";
+        box.classList.remove("hidden");
+      },
+
+      updateStatusBadge() {
+        const badge = document.getElementById("menu-ai-status-badge");
+        const chatStatus = document.getElementById("sensei-chat-status");
+        if (this.config.apiKey && this.isConnected) {
+          badge.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold bg-emerald-100 text-emerald-900 border border-emerald-400";
+          badge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span><span>AI Ninja Sensei Aktif (${this.config.model})</span>`;
+          if (chatStatus) chatStatus.textContent = `Terhubung ke AI (${this.config.model})`;
+        } else {
+          badge.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold bg-amber-200/80 text-amber-900 border border-amber-400";
+          badge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span><span>Mode Offline (Bank Soal Bawaan)</span>`;
+          if (chatStatus) chatStatus.textContent = "Mode Tutor Bawaan (Offline Siap Pakai)";
+        }
+      },
+
+      /**
+       * Panggilan API Generik dengan Penanganan Kesalahan & Timeout
+       */
+      async callLLM(systemPrompt, userPrompt, expectJson = false) {
+        if (!this.config.apiKey) {
+          throw new Error("API Key belum dikonfigurasi.");
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+        try {
+          if (this.config.provider === "gemini") {
+            const url = `${this.config.endpoint}?key=${encodeURIComponent(this.config.apiKey)}`;
+            const payload = {
+              contents: [{ parts: [{ text: userPrompt }] }],
+              systemInstruction: { parts: [{ text: systemPrompt }] },
+              generationConfig: {
+                temperature: 0.5,
+                ...(expectJson ? { responseMimeType: "application/json" } : {})
+              }
+            };
+
+            const res = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+              signal: controller.signal
+            });
+
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}: Gagal menghubungi layanan Gemini.`);
+            }
+            const data = await res.json();
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!text) throw new Error("Respons AI kosong.");
+            return text;
+          } else {
+            // OpenAI-compatible endpoint
+            const payload = {
+              model: this.config.model,
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+              ],
+              temperature: 0.5
+            };
+            const res = await fetch(this.config.endpoint, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${this.config.apiKey}`
+              },
+              body: JSON.stringify(payload),
+              signal: controller.signal
+            });
+
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}: Gagal menghubungi layanan AI.`);
+            }
+            const data = await res.json();
+            const text = data?.choices?.[0]?.message?.content;
+            if (!text) throw new Error("Respons AI kosong.");
+            return text;
+          }
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      },
+
+      async testConnection() {
+        const tempKey = document.getElementById("ai-api-key").value.trim();
+        const box = document.getElementById("ai-test-result");
+        if (!tempKey) {
+          box.className = "p-2.5 rounded-xl text-xs font-bold bg-rose-100 text-rose-900 border border-rose-400";
+          box.textContent = "⚠️ Masukkan API Key terlebih dahulu untuk menguji koneksi.";
+          box.classList.remove("hidden");
+          return;
+        }
+
+        // Simpan sementara untuk uji coba
+        this.config.apiKey = tempKey;
+        this.config.provider = document.getElementById("ai-provider").value;
+        this.config.model = document.getElementById("ai-model").value.trim();
+        this.config.endpoint = document.getElementById("ai-endpoint").value.trim();
+
+        const btn = document.getElementById("btn-test-ai");
+        btn.disabled = true;
+        btn.textContent = "⏳ Menguji...";
+
+        try {
+          const reply = await this.callLLM(
+            "Kamu adalah AI Ninja Sensei untuk matematika SD.",
+            "Jawab singkat dalam 1 kalimat bahasa Indonesia: Sapa Ninja Muda!"
+          );
+          this.isConnected = true;
+          this.updateStatusBadge();
+          box.className = "p-2.5 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-400";
+          box.textContent = `✅ Koneksi Berhasil! AI Ninja Sensei: "${reply.trim()}"`;
+        } catch (err) {
+          this.isConnected = false;
+          this.updateStatusBadge();
+          box.className = "p-2.5 rounded-xl text-xs font-bold bg-rose-100 text-rose-900 border border-rose-400";
+          box.textContent = `❌ Koneksi Gagal (${err.message}). Game otomatis memakai mode soal bawaan.`;
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "🔌 Uji Koneksi AI";
+          box.classList.remove("hidden");
+        }
+      },
+
+      /**
+       * Mengambil soal terstruktur JSON dari AI dan memvalidasi matematikanya dengan JS
+       */
+      async prefetchAIProblems(level) {
+        if (!this.config.apiKey || !this.isConnected) return;
+
+        const levelDesc = {
+          1: "penjumlahan dua pecahan biasa berpenyebut sama (contoh: 1/5 + 2/5)",
+          2: "penjumlahan dua pecahan biasa berpenyebut berbeda dengan KPK <= 20 (contoh: 1/2 + 1/4)",
+          3: "penjumlahan pecahan campuran (contoh: 1 1/2 + 1/2 atau 2 1/4 + 1 1/2)",
+          4: "penjumlahan tiga pecahan, pecahan hasil > 1, atau soal cerita kehidupan sehari-hari anak SD Indonesia"
+        }[level];
+
+        const systemPrompt = `Kamu adalah pembuat soal matematika SD kelas 5-6 bertema ninja Jepang.
+Kembalikan HANYA JSON array berisi 3 objek soal tanpa markdown.
+Format wajib tiap objek:
+{
+  "operands": ["1/2", "1/4"],
+  "story": "Teks soal cerita singkat ramah anak SD (kosongkan string jika soal hitungan langsung)",
+  "hints": ["Petunjuk 1 tanpa membocorkan jawaban akhir", "Petunjuk 2 langkah menyamakan penyebut"]
+}`;
+
+        try {
+          const rawText = await this.callLLM(
+            systemPrompt,
+            `Buat 3 soal variasi ${levelDesc}. Pastikan penyebut positif dan angka wajar untuk siswa SD.`,
+            true
+          );
+          const cleaned = rawText.replace(/```json|```/g, "").trim();
+          const parsedList = JSON.parse(cleaned);
+          if (Array.isArray(parsedList)) {
+            for (const item of parsedList) {
+              if (Array.isArray(item.operands) && item.operands.length >= 2) {
+                // VALIDASI MATEMATIKA KETAT DENGAN JAVASCRIPT
+                const validated = QuestionEngine.buildValidatedProblem({
+                  level,
+                  operandStrings: item.operands.map(String),
+                  story: typeof item.story === "string" ? item.story : "",
+                  customHints: Array.isArray(item.hints) ? item.hints.map(String) : null,
+                  source: "AI Ninja Sensei"
+                });
+                this.aiQuestionQueue.push(validated);
+              }
+            }
+          }
+        } catch (err) {
+          // Jika AI gagal, game tetap mulus memakai bank soal lokal
+          this.isConnected = false;
+          this.updateStatusBadge();
+        }
+      },
+
+      getNextProblem(level) {
+        if (this.aiQuestionQueue.length > 0) {
+          return this.aiQuestionQueue.shift();
+        }
+        return QuestionEngine.getOfflineProblem(level);
+      },
+
+      /**
+       * Analisis pola kesalahan siswa dan berikan rekomendasi latihan akhir level
+       */
+      async getEndLevelRecommendation(stats) {
+        const localRec = this.buildLocalRecommendation(stats);
+        if (!this.config.apiKey || !this.isConnected) {
+          return { text: localRec, isAI: false };
+        }
+
+        try {
+          const summary = `Level: ${stats.level}, Benar: ${stats.correct}, Salah: ${stats.wrong}, Akurasi: ${stats.accuracy}%, Jenis kesalahan: ${stats.mistakes.join(", ") || "tidak ada"}.`;
+          const reply = await this.callLLM(
+            "Kamu adalah AI Ninja Sensei, guru matematika SD yang ramah, positif, dan memotivasi. Berikan evaluasi singkat (2-3 kalimat) dalam bahasa Indonesia sederhana tanpa menyebut data pribadi.",
+            `Berikan rekomendasi latihan berdasarkan hasil belajar siswa berikut: ${summary}`
+          );
+          return { text: reply.trim(), isAI: true };
+        } catch (e) {
+          return { text: localRec, isAI: false };
+        }
+      },
+
+      buildLocalRecommendation(stats) {
+        if (stats.mistakes.includes("menjumlahkan_penyebut")) {
+          return "Kamu sudah berani mencoba! Perhatikan bahwa saat menjumlahkan pecahan, bagian penyebut (angka bawah) TIDAK ikut dijumlahkan, melainkan disamakan terlebih dahulu menggunakan KPK. Ayo latih kembali Level 2!";
+        }
+        if (stats.mistakes.includes("lupa_menyamakan_penyebut")) {
+          return "Langkahmu sudah bagus! Ingat untuk mengubah pembilang secara adil saat menyamakan penyebut pecahan. Coba ulangi latihan menyamakan penyebut agar makin mahir!";
+        }
+        if (stats.accuracy >= 90) {
+          return "Luar biasa, Ninja Master! Pemahamanmu tentang penjumlahan pecahan dan penyederhanaan hasil sudah sangat kuat. Siap menaklukkan tantangan berikutnya!";
+        }
+        if (stats.accuracy >= 70) {
+          return "Kerja bagus, Ninja Hebat! Terus berlatih menyederhanakan hasil akhir pecahan ke bentuk paling sederhana agar akurasimu mencapai 100%.";
+        }
+        return "Terus semangat berlatih, Ninja Muda! Gunakan visual batang pecahan pada halaman pembahasan untuk melihat bagaimana dua bagian pecahan digabungkan.";
+      },
+
+      /**
+       * Percakapan Tanya Jawab Interaktif dengan AI Ninja Sensei
+       */
+      async askQuick(text) {
+        document.getElementById("sensei-chat-input").value = text;
+        await this.sendChatMessage(text);
+      },
+
+      async handleChatSubmit(e) {
+        e.preventDefault();
+        const input = document.getElementById("sensei-chat-input");
+        const q = input.value.trim();
+        if (!q) return;
+        input.value = "";
+        await this.sendChatMessage(q);
+      },
+
+      async sendChatMessage(question) {
+        const container = document.getElementById("sensei-chat-messages");
+        const sendBtn = document.getElementById("sensei-send-btn");
+
+        // Tampilkan pesan siswa
+        const userBubble = document.createElement("div");
+        userBubble.className = "p-3 rounded-2xl bg-indigo-600 text-white text-xs sm:text-sm font-bold ml-8 shadow-sm";
+        userBubble.textContent = `Kamu: ${question}`;
+        container.appendChild(userBubble);
+        container.scrollTop = container.scrollHeight;
+
+        sendBtn.disabled = true;
+        const typingBubble = document.createElement("div");
+        typingBubble.className = "p-3 rounded-2xl bg-white border border-amber-300 text-xs sm:text-sm font-semibold text-slate-600 mr-6";
+        typingBubble.textContent = "🧙‍♂️ Ninja Sensei sedang berpikir...";
+        container.appendChild(typingBubble);
+        container.scrollTop = container.scrollHeight;
+
+        let answerText = "";
+        const activeQ = Game.currentQuestion;
+        const contextStr = activeQ
+          ? `Soal yang sedang dihadapi siswa: ${activeQ.operands.map(o => o.raw).join(" + ")} (JANGAN langsung beri tahu jawaban akhir kecuali siswa sudah menjawab; berikan bimbingan langkah demi langkah).`
+          : "Siswa sedang berada di menu utama game penjumlahan pecahan SD kelas 5-6.";
+
+        if (this.config.apiKey && this.isConnected) {
+          try {
+            answerText = await this.callLLM(
+              `Kamu adalah AI Ninja Sensei, guru matematika SD kelas 5-6 yang ramah dan menyemangati. Jelaskan konsep penjumlahan pecahan dengan langkah sederhana dalam bahasa Indonesia. ${contextStr}`,
+              question
+            );
+          } catch (err) {
+            answerText = this.getLocalTutorReply(question, activeQ);
+          }
+        } else {
+          answerText = this.getLocalTutorReply(question, activeQ);
+        }
+
+        typingBubble.innerHTML = `<strong>🧙‍♂️ Ninja Sensei:</strong> ${answerText.replace(/\n/g, "<br>")}`;
+        container.scrollTop = container.scrollHeight;
+        sendBtn.disabled = false;
+      },
+
+      getLocalTutorReply(question, activeQ) {
+        const qLower = question.toLowerCase();
+        if (qLower.includes("1/2") && qLower.includes("1/4")) {
+          return "Penyebut kedua pecahan berbeda (2 dan 4). Ubah 1/2 menjadi pecahan senilai berpenyebut 4, yaitu 2/4. Kemudian jumlahkan pembilangnya: 2/4 + 1/4 = 3/4. Hebat, Ninja Muda!";
+        }
+        if (qLower.includes("campuran")) {
+          return "Untuk menjumlahkan pecahan campuran: (1) Jumlahkan bilangan bulatnya terlebih dahulu, (2) Samakan penyebut bagian pecahannya lalu jumlahkan, (3) Gabungkan dan sederhanakan hasilnya!";
+        }
+        if (activeQ) {
+          return `Untuk soal ${activeQ.operands.map(o => o.raw).join(" + ")}: ${activeQ.hints[0]} ${activeQ.hints[1]}`;
+        }
+        return "Kunci penjumlahan pecahan adalah: jika penyebut sudah sama, langsung jumlahkan pembilangnya. Jika penyebut berbeda, samakan dulu menggunakan KPK, lalu jumlahkan pembilangnya dan sederhanakan!";
+      }
+    };
+
+    /**
+     * ========================================================================
+     * 5. VISUALISASI BATANG PECAHAN (SVG FRACTION BAR MODEL UNTUK PEMBAHASAN)
+     * ========================================================================
+     */
+    const FractionVisualizer = {
+      renderSVG(problem) {
+        const { operands, kpk, allSameDenom, answer, preferMixed } = problem;
+        const barWidth = 260;
+        const barHeight = 26;
+        const rows = [];
+
+        // Baris tiap suku pecahan
+        operands.forEach((op, idx) => {
+          const frac = op.frac;
+          const displayDen = Math.min(frac.den, 16);
+          const displayNum = Math.min(frac.num, displayDen);
+          rows.push({
+            label: `${op.raw}`,
+            den: displayDen,
+            filled: displayNum,
+            color: idx === 0 ? "#0284c7" : idx === 1 ? "#7c3aed" : "#d97706",
+            note: frac.num > frac.den ? "(Pecahan > 1)" : ""
+          });
+
+          if (!allSameDenom && kpk <= 16 && frac.den !== kpk) {
+            const mult = kpk / frac.den;
+            rows.push({
+              label: `= ${frac.num * mult}/${kpk}`,
+              den: kpk,
+              filled: Math.min(frac.num * mult, kpk),
+              color: idx === 0 ? "#38bdf8" : idx === 1 ? "#a78bfa" : "#fbbf24",
+              note: "(Senilai)"
+            });
+          }
+        });
+
+        // Baris hasil akhir
+        const resDen = Math.min(answer.den, 16);
+        const resFilled = answer.num >= answer.den ? resDen : answer.num;
+        rows.push({
+          label: `Hasil: ${answer.toPlainString(preferMixed)}`,
+          den: resDen,
+          filled: resFilled,
+          color: "#16a34a",
+          note: answer.num > answer.den ? "(Lebih dari 1 utuh)" : "(Paling sederhana)"
+        });
+
+        const totalHeight = rows.length * 42 + 12;
+        let svgContent = `<svg viewBox="0 0 460 ${totalHeight}" class="w-full max-w-lg mx-auto" role="img" aria-label="Diagram Batang Pecahan">`;
+
+        rows.forEach((row, rIdx) => {
+          const y = rIdx * 42 + 8;
+          // Label kiri
+          svgContent += `<text x="6" y="${y + 18}" font-size="13" font-weight="800" fill="#1e293b">${row.label}</text>`;
+
+          // Batang terpartisi
+          const startX = 115;
+          const segW = barWidth / row.den;
+          for (let i = 0; i < row.den; i++) {
+            const fill = i < row.filled ? row.color : "#f1f5f9";
+            svgContent += `<rect x="${startX + i * segW}" y="${y}" width="${segW}" height="${barHeight}" fill="${fill}" stroke="#334155" stroke-width="1.5" />`;
+          }
+
+          // Catatan kanan
+          if (row.note) {
+            svgContent += `<text x="${startX + barWidth + 8}" y="${y + 17}" font-size="11" font-weight="700" fill="#475569">${row.note}</text>`;
+          }
+        });
+
+        svgContent += `</svg>`;
+        return svgContent;
+      }
+    };
+
+    /**
+     * ========================================================================
+     * 6. PENGELOLA ANTARMUKA PENGGUNA (UI MANAGER)
+     * ========================================================================
+     */
+    const UI = {
+      showScreen(screenId) {
+        ["screen-menu", "screen-game", "screen-result"].forEach(id => {
+          document.getElementById(id).classList.toggle("hidden", id !== screenId);
+        });
+      },
+
+      openModal(modalId) {
+        document.getElementById(modalId).classList.remove("hidden");
+      },
+
+      closeModal(modalId) {
+        document.getElementById(modalId).classList.add("hidden");
+      },
+
+      openSenseiChat(fromQuestion = false) {
+        this.openModal("modal-sensei-chat");
+        if (fromQuestion && Game.currentQuestion) {
+          const input = document.getElementById("sensei-chat-input");
+          input.focus();
+        }
+      },
+
+      showToast(text, duration = 1800) {
+        const toast = document.getElementById("canvas-toast");
+        toast.textContent = text;
+        toast.classList.remove("hidden");
+        clearTimeout(this._toastTimer);
+        this._toastTimer = setTimeout(() => {
+          toast.classList.add("hidden");
+        }, duration);
+      }
+    };
+
+    /**
+     * ========================================================================
+     * 7. MESIN PERMAINAN PLATFORMER 2D & FISIKA (CANVAS API + REQUESTANIMATIONFRAME)
+     * ========================================================================
+     */
+    const Game = {
+      selectedLevel: 1,
+      currentLevel: 1,
+      state: "MENU", // MENU | PLAYING | QUESTION | EXPLANATION | PAUSED | RESULT
+      autoRun: true,
+
+      // Statistik Pemain & Sesi
+      playerName: "Ninja Muda",
+      score: 0,
+      coins: 0,
+      lives: 3,
+      maxLives: 3,
+      correctCount: 0,
+      wrongCount: 0,
+      mistakeTypes: [],
+      levelStartTime: 0,
+      elapsedSeconds: 0,
+
+      // State Soal Aktif
+      activeObstacleIndex: -1,
+      currentQuestion: null,
+      questionStartTime: 0,
+      bonusTimeLimit: 20, // detik untuk bonus kecepatan +5
+      attemptsOnCurrentObstacle: 0,
+      hintLevelShown: 0,
+      lastAnswerWasCorrect: false,
+
+      // Fisika & Dunia Kanvas
+      canvas: null,
+      ctx: null,
+      logicalHeight: 500,
+      logicalWidth: 900,
+      groundY: 395,
+      gravity: 1750,
+      cameraX: 0,
+      worldLength: 4200,
+      finishX: 3920,
+      lastFrameTime: 0,
+      rafId: null,
+
+      // Entitas Dunia
+      ninja: {
+        x: 110,
+        y: 395,
+        w: 44,
+        h: 54,
+        vx: 0,
+        vy: 0,
+        grounded: true,
+        facing: 1,
+        runCycle: 0,
+        flipAngle: 0,
+        isHeroJumping: false,
+        hurtTimer: 0
+      },
+      platforms: [],
+      obstacles: [],
+      coinItems: [],
+      particles: [],
+      sakuraPetals: [],
+      clouds: [],
+
+      // Input Keyboard & Sentuh
+      keys: {
+        left: false,
+        right: false,
+        jumpPressed: false
+      },
+
+      init() {
+        this.canvas = document.getElementById("gameCanvas");
+        this.ctx = this.canvas.getContext("2d");
+        AISensei.loadConfig();
+        this.loadSavedProgress();
+        this.bindInputs();
+        this.handleResize();
+        window.addEventListener("resize", () => this.handleResize());
+      },
+
+      loadSavedProgress() {
+        try {
+          const savedName = localStorage.getItem("ninja_fraction_player");
+          if (savedName) {
+            document.getElementById("player-name-input").value = savedName;
+          }
+          const savedRanks = JSON.parse(localStorage.getItem("ninja_fraction_ranks") || "{}");
+          for (let lv = 1; lv <= 4; lv++) {
+            const badge = document.getElementById(`badge-level-${lv}`);
+            if (badge && savedRanks[lv]) {
+              badge.textContent = `⭐ ${savedRanks[lv]}`;
+              badge.className = "text-xs font-extrabold text-emerald-800 bg-emerald-100 px-2 py-1 rounded-lg";
+            }
+          }
+        } catch (e) {}
+      },
+
+      saveLevelRank(level, rankName) {
+        try {
+          const savedRanks = JSON.parse(localStorage.getItem("ninja_fraction_ranks") || "{}");
+          savedRanks[level] = rankName;
+          localStorage.setItem("ninja_fraction_ranks", JSON.stringify(savedRanks));
+          this.loadSavedProgress();
+        } catch (e) {}
+      },
+
+      selectLevel(lv) {
+        this.selectedLevel = lv;
+        document.querySelectorAll(".level-card").forEach(btn => {
+          const btnLv = Number(btn.getAttribute("data-level-btn"));
+          if (btnLv === lv) {
+            btn.classList.add("border-red-600", "ring-2", "ring-red-400", "bg-white");
+            btn.classList.remove("border-amber-300", "bg-white/90");
+          } else {
+            btn.classList.remove("border-red-600", "ring-2", "ring-red-400", "bg-white");
+            btn.classList.add("border-amber-300", "bg-white/90");
+          }
+        });
+      },
+
+      handleResize() {
+        if (!this.canvas) return;
+        const wrapper = document.getElementById("canvas-wrapper");
+        const rect = wrapper.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        this.canvas.width = Math.floor(rect.width * dpr);
+        this.canvas.height = Math.floor(rect.height * dpr);
+
+        const aspect = rect.width / rect.height;
+        this.logicalHeight = 500;
+        this.logicalWidth = Math.max(480, Math.round(this.logicalHeight * aspect));
+        this.ctx.setTransform(this.canvas.width / this.logicalWidth, 0, 0, this.canvas.height / this.logicalHeight, 0, 0);
+      },
+
+      bindInputs() {
+        // Kontrol Keyboard Desktop (mencegah repeat pada tombol lompat & jeda)
+        window.addEventListener("keydown", (e) => {
+          if (e.target && ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
+
+          if (e.code === "ArrowLeft" || e.code === "KeyA") {
+            this.keys.left = true;
+          }
+          if (e.code === "ArrowRight" || e.code === "KeyD") {
+            this.keys.right = true;
+          }
+          if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") {
+            if (this.state === "PLAYING") e.preventDefault();
+            if (!e.repeat && this.state === "PLAYING") {
+              this.triggerJump();
+            }
+          }
+          if (e.code === "Escape" && !e.repeat) {
+            if (this.state === "PLAYING") {
+              this.pauseGame();
+            } else if (this.state === "PAUSED") {
+              this.resumeGame();
+            }
+          }
+        });
+
+        window.addEventListener("keyup", (e) => {
+          if (e.code === "ArrowLeft" || e.code === "KeyA") this.keys.left = false;
+          if (e.code === "ArrowRight" || e.code === "KeyD") this.keys.right = false;
+        });
+
+        // Kontrol Sentuh Ponsel / Tablet
+        const bindHold = (elId, keyName) => {
+          const el = document.getElementById(elId);
+          if (!el) return;
+          const start = (e) => {
+            e.preventDefault();
+            this.keys[keyName] = true;
+          };
+          const end = (e) => {
+            e.preventDefault();
+            this.keys[keyName] = false;
+          };
+          el.addEventListener("touchstart", start, { passive: false });
+          el.addEventListener("touchend", end, { passive: false });
+          el.addEventListener("touchcancel", end, { passive: false });
+          el.addEventListener("mousedown", start);
+          el.addEventListener("mouseup", end);
+          el.addEventListener("mouseleave", end);
+        };
+
+        bindHold("touch-left", "left");
+        bindHold("touch-right", "right");
+
+        const jumpBtn = document.getElementById("touch-jump");
+        if (jumpBtn) {
+          const doJump = (e) => {
+            e.preventDefault();
+            if (this.state === "PLAYING") this.triggerJump();
+          };
+          jumpBtn.addEventListener("touchstart", doJump, { passive: false });
+          jumpBtn.addEventListener("mousedown", doJump);
+        }
+      },
+
+      toggleAutoRun() {
+        this.autoRun = !this.autoRun;
+        const btn = document.getElementById("hud-autorun-btn");
+        btn.textContent = this.autoRun ? "🏃 Auto-Lari: ON" : "🧍 Auto-Lari: OFF";
+        btn.className = this.autoRun
+          ? "px-2.5 py-1.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-xs font-bold border border-emerald-400/50"
+          : "px-2.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold border border-slate-500";
+      },
+
+      /**
+       * Memulai permainan pada level tertentu
+       */
+      startLevel(level) {
+        AudioFX.init();
+        this.currentLevel = level;
+        this.selectedLevel = level;
+
+        const nameVal = document.getElementById("player-name-input").value.trim() || "Ninja Muda";
+        this.playerName = nameVal;
+        try {
+          localStorage.setItem("ninja_fraction_player", nameVal);
+        } catch (e) {}
+
+        // Reset statistik
+        this.score = 0;
+        this.coins = 0;
+        this.lives = this.maxLives;
+        this.correctCount = 0;
+        this.wrongCount = 0;
+        this.mistakeTypes = [];
+        this.elapsedSeconds = 0;
+        this.levelStartTime = performance.now();
+        this.activeObstacleIndex = -1;
+        this.currentQuestion = null;
+
+        QuestionEngine.resetSession();
+        AISensei.prefetchAIProblems(level);
+
+        // Bangun dunia level
+        this.buildWorld(level);
+
+        // Tampilkan layar game & perbarui HUD
+        UI.showScreen("screen-game");
+        UI.closeModal("modal-explanation");
+        UI.closeModal("modal-pause");
+        document.getElementById("question-overlay").classList.add("hidden");
+
+        this.handleResize();
+        this.updateHUD();
+        this.state = "PLAYING";
+
+        if (this.rafId) cancelAnimationFrame(this.rafId);
+        this.lastFrameTime = performance.now();
+        this.rafId = requestAnimationFrame((ts) => this.gameLoop(ts));
+      },
+
+      startNextLevel() {
+        const nextLv = Math.min(4, this.currentLevel + 1);
+        this.startLevel(nextLv);
+      },
+
+      buildWorld(level) {
+        this.groundY = 395;
+        this.cameraX = 0;
+        this.ninja = {
+          x: 110,
+          y: this.groundY,
+          w: 44,
+          h: 54,
+          vx: 0,
+          vy: 0,
+          grounded: true,
+          facing: 1,
+          runCycle: 0,
+          flipAngle: 0,
+          isHeroJumping: false,
+          hurtTimer: 0
+        };
+
+        // 5 Rintangan Matematika per Level
+        const obstacleTypes = [
+          { type: "chasm", name: "Jurang Bambu Runcing" },
+          { type: "boulder", name: "Batu Segel Raksasa" },
+          { type: "river", name: "Jembatan Sungai Koi" },
+          { type: "gate", name: "Gerbang Gulungan Naga" },
+          { type: "chasm", name: "Jurang Kuil Master" }
+        ];
+
+        this.obstacles = [];
+        this.platforms = [];
+        this.coinItems = [];
+        this.particles = [];
+
+        const spacing = 680;
+        for (let i = 0; i < 5; i++) {
+          const obsX = 660 + i * spacing;
+          const info = obstacleTypes[i];
+          this.obstacles.push({
+            index: i,
+            x: obsX,
+            width: 115,
+            triggerX: obsX - 58,
+            type: info.type,
+            name: info.name,
+            solved: false
+          });
+
+          // Platform bambu melayang sebelum rintangan untuk melompat & mengambil koin
+          const platX = obsX - 360;
+          const platY = 290 - (i % 2) * 28;
+          this.platforms.push({
+            x: platX,
+            y: platY,
+            w: 145,
+            h: 18
+          });
+
+          // Koin di atas platform bambu
+          for (let c = 0; c < 3; c++) {
+            this.coinItems.push({
+              x: platX + 28 + c * 44,
+              y: platY - 28,
+              r: 13,
+              collected: false,
+              bobOffset: c * 0.8
+            });
+          }
+
+          // Koin melengkung di atas rintangan (didapat saat melompati rintangan!)
+          for (let c = 0; c < 3; c++) {
+            this.coinItems.push({
+              x: obsX + 18 + c * 40,
+              y: this.groundY - 125 - (c === 1 ? 26 : 0),
+              r: 13,
+              collected: false,
+              bobOffset: c * 0.6
+            });
+          }
+        }
+
+        this.finishX = 660 + 4 * spacing + 340;
+        this.worldLength = this.finishX + 350;
+
+        // Awan & Kelopak Bunga Sakura Latar Belakang
+        this.clouds = Array.from({ length: 10 }, (_, idx) => ({
+          x: idx * 450 + Math.random() * 180,
+          y: 45 + (idx % 3) * 38,
+          scale: 0.7 + (idx % 3) * 0.25,
+          speed: 14 + (idx % 3) * 6
+        }));
+
+        this.sakuraPetals = Array.from({ length: 28 }, () => ({
+          x: Math.random() * this.logicalWidth,
+          y: Math.random() * this.logicalHeight,
+          vx: -25 - Math.random() * 25,
+          vy: 22 + Math.random() * 25,
+          size: 4 + Math.random() * 4,
+          rot: Math.random() * Math.PI * 2
+        }));
+      },
+
+      triggerJump() {
+        if (this.ninja.grounded) {
+          this.ninja.vy = -650;
+          this.ninja.grounded = false;
+          AudioFX.playJump();
+          this.spawnParticles(this.ninja.x + 22, this.ninja.y, "#fde68a", 8);
+        }
+      },
+
+      /**
+       * Loop Animasi Utama berbasis Delta Time
+       */
+      gameLoop(timestamp) {
+        const rawDt = (timestamp - this.lastFrameTime) / 1000;
+        this.lastFrameTime = timestamp;
+        const dt = Math.min(rawDt, 0.05); // Batasi delta time agar fisika stabil
+
+        if (this.state === "PLAYING") {
+          this.elapsedSeconds += dt;
+          this.updatePhysics(dt);
+        } else if (this.state === "QUESTION" || this.state === "EXPLANATION") {
+          // Tetap jalankan partikel & timer bonus saat modal terbuka
+          this.updateAmbient(dt);
+          if (this.state === "QUESTION") {
+            this.updateQuestionTimer();
+          }
+        }
+
+        this.render();
+        this.rafId = requestAnimationFrame((ts) => this.gameLoop(ts));
+      },
+
+      updateAmbient(dt) {
+        // Gerakkan awan & kelopak sakura
+        this.clouds.forEach(c => {
+          c.x -= c.speed * dt;
+          if (c.x < -160) c.x = this.worldLength + 100;
+        });
+
+        this.sakuraPetals.forEach(p => {
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.rot += 2.2 * dt;
+          if (p.y > this.logicalHeight) {
+            p.y = -10;
+            p.x = Math.random() * this.logicalWidth;
+          }
+          if (p.x < -10) p.x = this.logicalWidth + 10;
+        });
+
+        // Update partikel
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const pt = this.particles[i];
+          pt.x += pt.vx * dt;
+          pt.y += pt.vy * dt;
+          pt.vy += 450 * dt;
+          pt.life -= dt;
+          if (pt.life <= 0) this.particles.splice(i, 1);
+        }
+      },
+
+      updatePhysics(dt) {
+        this.updateAmbient(dt);
+
+        const n = this.ninja;
+        if (n.hurtTimer > 0) n.hurtTimer = Math.max(0, n.hurtTimer - dt);
+
+        // Kecepatan Horizontal Ninja
+        const baseSpeed = 235;
+        if (n.isHeroJumping) {
+          n.vx = 360;
+          n.facing = 1;
+          n.flipAngle += 11 * dt;
+        } else {
+          let moveDir = 0;
+          if (this.keys.left) moveDir -= 1;
+          if (this.keys.right) moveDir += 1;
+
+          if (moveDir !== 0) {
+            n.vx = moveDir * (baseSpeed + 45);
+            n.facing = moveDir;
+          } else if (this.autoRun) {
+            n.vx = baseSpeed;
+            n.facing = 1;
+          } else {
+            n.vx = 0;
+          }
+        }
+
+        const prevY = n.y;
+        n.x += n.vx * dt;
+        n.x = Math.max(40, Math.min(this.finishX + 40, n.x));
+
+        // Gravitasi & Pergerakan Vertikal
+        n.vy += this.gravity * dt;
+        n.y += n.vy * dt;
+
+        // Cek pendaratan pada platform bambu melayang (hanya saat jatuh dari atas)
+        let landedOnPlatform = false;
+        if (n.vy >= 0 && !n.isHeroJumping) {
+          for (const plat of this.platforms) {
+            const withinX = n.x + n.w * 0.7 > plat.x && n.x + n.w * 0.3 < plat.x + plat.w;
+            if (withinX && prevY <= plat.y + 6 && n.y >= plat.y) {
+              n.y = plat.y;
+              n.vy = 0;
+              n.grounded = true;
+              landedOnPlatform = true;
+              break;
+            }
+          }
+        }
+
+        // Pendaratan pada tanah utama
+        if (!landedOnPlatform) {
+          if (n.y >= this.groundY) {
+            n.y = this.groundY;
+            n.vy = 0;
+            n.grounded = true;
+            if (n.isHeroJumping) {
+              n.isHeroJumping = false;
+              n.flipAngle = 0;
+              this.spawnParticles(n.x + 22, n.y, "#fde047", 14);
+            }
+          } else {
+            n.grounded = false;
+          }
+        }
+
+        if (n.grounded && Math.abs(n.vx) > 5) {
+          n.runCycle += 14 * dt;
+        }
+
+        // Cek Pengumpulan Koin Emas
+        for (const coin of this.coinItems) {
+          if (coin.collected) continue;
+          const dx = (n.x + n.w / 2) - coin.x;
+          const dy = (n.y - n.h / 2) - coin.y;
+          if (Math.hypot(dx, dy) < 38) {
+            coin.collected = true;
+            this.coins += 1;
+            this.score += 2;
+            AudioFX.playCoin();
+            this.spawnParticles(coin.x, coin.y, "#fbbf24", 10);
+            this.updateHUD();
+          }
+        }
+
+        // Cek Pendekatan ke Rintangan Berikutnya
+        if (!n.isHeroJumping) {
+          for (const obs of this.obstacles) {
+            if (!obs.solved && n.x + n.w >= obs.triggerX) {
+              n.x = obs.triggerX - n.w;
+              n.vx = 0;
+              n.y = this.groundY;
+              n.vy = 0;
+              n.grounded = true;
+              this.triggerObstacleQuestion(obs.index);
+              return;
+            }
+          }
+        }
+
+        // Cek Mencapai Garis Finis
+        if (n.x >= this.finishX) {
+          this.finishLevel(true);
+          return;
+        }
+
+        // Kamera Mengikuti Ninja dengan Halus
+        const targetCamX = Math.max(0, Math.min(this.worldLength - this.logicalWidth, n.x - this.logicalWidth * 0.28));
+        this.cameraX += (targetCamX - this.cameraX) * Math.min(1, 8 * dt);
+      },
+
+      spawnParticles(x, y, color, count = 12) {
+        for (let i = 0; i < count; i++) {
+          const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+          const speed = 90 + Math.random() * 190;
+          this.particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 90,
+            color,
+            size: 4 + Math.random() * 4,
+            life: 0.45 + Math.random() * 0.35
+          });
+        }
+      },
+
+      /**
+       * ======================================================================
+       * INTEGRASI SOAL MATEMATIKA SAAT MENDEKATI RINTANGAN
+       * ======================================================================
+       */
+      triggerObstacleQuestion(obsIndex) {
+        this.state = "QUESTION";
+        this.activeObstacleIndex = obsIndex;
+        this.attemptsOnCurrentObstacle = 0;
+        this.hintLevelShown = 0;
+        this.questionStartTime = performance.now();
+
+        const obs = this.obstacles[obsIndex];
+        const q = AISensei.getNextProblem(this.currentLevel);
+        this.currentQuestion = q;
+
+        // Isi elemen UI Gulungan Soal
+        document.getElementById("q-obstacle-label").textContent = `🚧 Rintangan ${obsIndex + 1}/5: ${obs.name}`;
+        document.getElementById("q-source-tag").textContent = `📜 ${q.source}`;
+
+        const storyBox = document.getElementById("q-story-box");
+        if (q.story) {
+          storyBox.textContent = q.story;
+          storyBox.classList.remove("hidden");
+        } else {
+          storyBox.classList.add("hidden");
+        }
+
+        // Render ekspresi matematika pecahan bertumpuk
+        const exprEl = document.getElementById("q-math-expression");
+        const partsHTML = q.operands.map(op => op.frac.toHTML(this.currentLevel >= 3));
+        exprEl.innerHTML = `${partsHTML.join(` <span class="text-red-600 mx-1">+</span> `)} <span class="text-slate-500 mx-1">=</span> <span class="px-3 py-1 rounded-xl bg-amber-100 border-2 border-dashed border-amber-500 text-amber-800">?</span>`;
+
+        // Reset kotak umpan balik & petunjuk
+        document.getElementById("q-feedback-banner").classList.add("hidden");
+        document.getElementById("q-hint-box").classList.add("hidden");
+        const hintBtn = document.getElementById("btn-request-hint");
+        hintBtn.disabled = false;
+        hintBtn.innerHTML = `<span>💡</span><span>Minta Petunjuk (1/2)</span>`;
+
+        // Render 4 tombol pilihan jawaban
+        const optionsGrid = document.getElementById("q-options-grid");
+        optionsGrid.innerHTML = "";
+        const letters = ["A", "B", "C", "D"];
+
+        q.options.forEach((opt, idx) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "btn-ninja p-3 sm:p-4 rounded-2xl bg-white hover:bg-amber-50 border-3 border-amber-500 text-slate-900 font-display font-bold text-xl sm:text-2xl flex items-center justify-center gap-3 shadow";
+          btn.innerHTML = `
+            <span class="w-8 h-8 rounded-full bg-amber-200 text-amber-950 text-sm font-extrabold flex items-center justify-center shrink-0">${letters[idx]}</span>
+            <span>${opt.labelHTML}</span>
+          `;
+          btn.onclick = () => this.submitAnswer(opt, btn);
+          optionsGrid.appendChild(btn);
+        });
+
+        document.getElementById("question-overlay").classList.remove("hidden");
+        this.updateQuestionTimer();
+      },
+
+      updateQuestionTimer() {
+        const elapsed = (performance.now() - this.questionStartTime) / 1000;
+        const remaining = Math.max(0, Math.ceil(this.bonusTimeLimit - elapsed));
+        const timerEl = document.getElementById("q-bonus-timer");
+        if (remaining > 0) {
+          timerEl.textContent = `Bonus +5: ${remaining}d`;
+          timerEl.className = "text-xs font-extrabold text-emerald-700";
+        } else {
+          timerEl.textContent = `Waktu Bonus Habis`;
+          timerEl.className = "text-xs font-bold text-slate-500";
+        }
+      },
+
+      showProgressiveHint() {
+        if (!this.currentQuestion) return;
+        const hints = this.currentQuestion.hints;
+        if (this.hintLevelShown < hints.length) {
+          this.hintLevelShown++;
+          const box = document.getElementById("q-hint-box");
+          const textEl = document.getElementById("q-hint-text");
+          textEl.innerHTML = hints.slice(0, this.hintLevelShown).map((h, i) => `<p class="mb-1"><strong>Tahap ${i + 1}:</strong> ${h}</p>`).join("");
+          box.classList.remove("hidden");
+
+          const btn = document.getElementById("btn-request-hint");
+          if (this.hintLevelShown >= hints.length) {
+            btn.disabled = true;
+            btn.innerHTML = `<span>💡</span><span>Semua Petunjuk Tampil</span>`;
+          } else {
+            btn.innerHTML = `<span>💡</span><span>Petunjuk Berikutnya (${this.hintLevelShown + 1}/${hints.length})</span>`;
+          }
+        }
+      },
+
+      /**
+       * Memproses pilihan jawaban siswa
+       */
+      submitAnswer(selectedOption, btnElement) {
+        if (this.state !== "QUESTION" || !this.currentQuestion) return;
+        const q = this.currentQuestion;
+        const elapsedSec = (performance.now() - this.questionStartTime) / 1000;
+
+        if (selectedOption.isCorrect) {
+          // JAWABAN BENAR!
+          AudioFX.playCorrect();
+          this.correctCount += 1;
+          this.lastAnswerWasCorrect = true;
+
+          const gotSpeedBonus = elapsedSec <= this.bonusTimeLimit;
+          const earnedPoints = gotSpeedBonus ? 15 : 10;
+          this.score += earnedPoints;
+
+          document.getElementById("question-overlay").classList.add("hidden");
+          this.updateHUD();
+          this.openExplanationModal(true, earnedPoints, gotSpeedBonus);
+        } else {
+          // JAWABAN SALAH
+          AudioFX.playWrong();
+          this.wrongCount += 1;
+          this.attemptsOnCurrentObstacle += 1;
+          this.lives = Math.max(0, this.lives - 1);
+          this.ninja.hurtTimer = 0.7;
+
+          if (selectedOption.misconception) {
+            this.mistakeTypes.push(selectedOption.misconception);
+          }
+
+          this.updateHUD();
+
+          // Nonaktifkan tombol pilihan yang salah
+          btnElement.disabled = true;
+          btnElement.classList.add("bg-rose-100", "border-rose-400", "opacity-60");
+
+          // Efek getaran ringan pada kartu soal
+          const card = document.getElementById("question-card");
+          card.classList.remove("animate-shake");
+          void card.offsetWidth;
+          card.classList.add("animate-shake");
+
+          // Jika nyawa habis atau sudah 2 kali salah pada rintangan ini -> tampilkan pembahasan lengkap
+          if (this.lives <= 0 || this.attemptsOnCurrentObstacle >= 2) {
+            this.lastAnswerWasCorrect = false;
+            document.getElementById("question-overlay").classList.add("hidden");
+            this.openExplanationModal(false, 0, false);
+          } else {
+            // Berikan umpan balik ramah & petunjuk bertahap tanpa langsung membocorkan jawaban
+            const fbBanner = document.getElementById("q-feedback-banner");
+            const fbText = document.getElementById("q-feedback-text");
+
+            let friendlyMsg = "Hampir benar, Ninja Muda! Mari samakan penyebutnya terlebih dahulu.";
+            if (selectedOption.misconception === "menjumlahkan_penyebut") {
+              friendlyMsg = "Hampir benar, Ninja Muda! Ingat, penyebut (angka di bawah) tidak ikut dijumlahkan. Mari samakan penyebutnya!";
+            } else if (q.allSameDenom) {
+              friendlyMsg = "Belum tepat, Ninja Muda! Penyebutnya sudah sama, coba hitung kembali jumlah pembilangnya dan sederhanakan.";
+            }
+
+            fbText.textContent = `${friendlyMsg} (Sisa nyawa: ${this.lives})`;
+            fbBanner.classList.remove("hidden");
+            this.showProgressiveHint();
+          }
+        }
+      },
+
+      /**
+       * Menampilkan Halaman / Modal Pembahasan dengan Visual Batang Pecahan
+       */
+      openExplanationModal(isCorrect, earnedPoints, gotSpeedBonus) {
+        this.state = "EXPLANATION";
+        const q = this.currentQuestion;
+
+        const banner = document.getElementById("exp-status-banner");
+        const icon = document.getElementById("exp-status-icon");
+        const title = document.getElementById("exp-status-title");
+        const subtitle = document.getElementById("exp-status-subtitle");
+        const pill = document.getElementById("exp-points-pill");
+
+        if (isCorrect) {
+          banner.className = "p-3.5 rounded-2xl bg-emerald-100 border-2 border-emerald-500 text-emerald-950 flex items-center justify-between gap-3";
+          icon.textContent = "🎉";
+          title.textContent = "Tepat Sekali, Ninja Muda!";
+          subtitle.textContent = gotSpeedBonus
+            ? "Jawaban benar + Bonus kecepatan menjawab!"
+            : "Jawabanmu benar dan sudah dalam bentuk paling sederhana!";
+          pill.className = "px-3 py-1 rounded-full bg-emerald-600 text-white font-display font-bold text-sm";
+          pill.textContent = `+${earnedPoints} Poin`;
+        } else {
+          banner.className = "p-3.5 rounded-2xl bg-amber-100 border-2 border-amber-500 text-amber-950 flex items-center justify-between gap-3";
+          icon.textContent = "📘";
+          title.textContent = "Mari Pelajari Pembahasannya!";
+          subtitle.textContent = this.lives > 0
+            ? "Perhatikan langkah di bawah ini sebelum melanjutkan petualangan."
+            : "Nyawamu telah habis, namun pelajari dulu cara menyelesaikannya ya!";
+          pill.className = "px-3 py-1 rounded-full bg-amber-600 text-white font-display font-bold text-sm";
+          pill.textContent = "Pembahasan";
+        }
+
+        // Ringkasan persamaan lengkap
+        const partsHTML = q.operands.map(op => op.frac.toHTML(q.preferMixed));
+        document.getElementById("exp-equation-summary").innerHTML =
+          `${partsHTML.join(` <span class="text-red-600 mx-1">+</span> `)} <span class="text-slate-500 mx-1">=</span> <span class="px-3 py-1 rounded-xl bg-emerald-100 border-2 border-emerald-500 text-emerald-900">${q.answer.toHTML(q.preferMixed)}</span>`;
+
+        // Render Visualisasi Batang Pecahan SVG
+        document.getElementById("exp-visual-container").innerHTML = FractionVisualizer.renderSVG(q);
+
+        // Render Langkah demi Langkah
+        const stepsList = document.getElementById("exp-steps-list");
+        stepsList.innerHTML = q.steps.map(st => `<li>${st}</li>`).join("");
+
+        UI.openModal("modal-explanation");
+      },
+
+      /**
+       * Melanjutkan petualangan setelah membaca pembahasan
+       */
+      continueAfterExplanation() {
+        UI.closeModal("modal-explanation");
+
+        // Jika nyawa sudah habis -> masuk ke halaman hasil (Game Over)
+        if (this.lives <= 0) {
+          this.finishLevel(false);
+          return;
+        }
+
+        // Tandai rintangan selesai & luncurkan lompatan akrobatik ninja melewati rintangan!
+        const obs = this.obstacles[this.activeObstacleIndex];
+        if (obs) {
+          obs.solved = true;
+          this.spawnParticles(obs.x + obs.width / 2, this.groundY - 30, "#34d399", 22);
+        }
+
+        this.state = "PLAYING";
+        this.ninja.isHeroJumping = true;
+        this.ninja.grounded = false;
+        this.ninja.vy = -740;
+        AudioFX.playJump();
+        UI.showToast(
+          this.lastAnswerWasCorrect
+            ? "⚔️ Jurus Lompatan Pecahan! Hebat!"
+            : "💨 Bom Asap Ninja! Ayo hati-hati di rintangan berikutnya!"
+        );
+        this.updateHUD();
+      },
+
+      /**
+       * Kontrol Jeda & Navigasi
+       */
+      pauseGame() {
+        if (this.state !== "PLAYING") return;
+        this.state = "PAUSED";
+        UI.openModal("modal-pause");
+      },
+
+      resumeGame() {
+        if (this.state !== "PAUSED") return;
+        UI.closeModal("modal-pause");
+        this.lastFrameTime = performance.now();
+        this.state = "PLAYING";
+      },
+
+      restartLevelFromPause() {
+        UI.closeModal("modal-pause");
+        this.startLevel(this.currentLevel);
+      },
+
+      returnToMenu() {
+        this.state = "MENU";
+        if (this.rafId) cancelAnimationFrame(this.rafId);
+        UI.closeModal("modal-pause");
+        UI.closeModal("modal-explanation");
+        document.getElementById("question-overlay").classList.add("hidden");
+        UI.showScreen("screen-menu");
+      },
+
+      updateHUD() {
+        document.getElementById("hud-player-name").textContent = this.playerName;
+        document.getElementById("hud-level-badge").textContent = `Lv.${this.currentLevel}`;
+        document.getElementById("hud-score").textContent = this.score;
+        document.getElementById("hud-coins").textContent = this.coins;
+        document.getElementById("hud-correct").textContent = this.correctCount;
+        document.getElementById("hud-wrong").textContent = this.wrongCount;
+
+        // Render Hati Nyawa
+        const heartsStr = "❤️".repeat(this.lives) + "🖤".repeat(Math.max(0, this.maxLives - this.lives));
+        document.getElementById("hud-hearts").textContent = heartsStr;
+
+        // Akurasi Jawaban
+        const totalAns = this.correctCount + this.wrongCount;
+        const accuracy = totalAns === 0 ? 100 : Math.round((this.correctCount / totalAns) * 100);
+        document.getElementById("hud-accuracy").textContent = `${accuracy}%`;
+
+        // Progres Rintangan
+        const solvedCount = this.obstacles.filter(o => o.solved).length;
+        const pct = Math.round((solvedCount / 5) * 100);
+        document.getElementById("hud-progress-bar").style.width = `${pct}%`;
+        document.getElementById("hud-progress-text").textContent = `${solvedCount}/5 Rintangan`;
+      },
+
+      /**
+       * ======================================================================
+       * HALAMAN HASIL & PERHITUNGAN GELAR NINJA
+       * ======================================================================
+       */
+      async finishLevel(isVictory) {
+        this.state = "RESULT";
+        if (this.rafId) cancelAnimationFrame(this.rafId);
+
+        if (isVictory) {
+          AudioFX.playVictory();
+        } else {
+          AudioFX.playWrong();
+        }
+
+        const totalAns = this.correctCount + this.wrongCount;
+        const accuracy = totalAns === 0 ? 0 : Math.round((this.correctCount / totalAns) * 100);
+
+        // Gelar Ninja dihitung murni dari akurasi pengerjaan soal (bukan koin)
+        let rankTitle = "🥷 Ninja Pemula";
+        let plainRank = "Ninja Pemula";
+        if (accuracy >= 90) {
+          rankTitle = "👑 Ninja Master Pecahan";
+          plainRank = "Ninja Master Pecahan";
+        } else if (accuracy >= 70) {
+          rankTitle = "⚔️ Ninja Hebat";
+          plainRank = "Ninja Hebat";
+        } else if (accuracy >= 50) {
+          rankTitle = "🌟 Ninja Terampil";
+          plainRank = "Ninja Terampil";
+        }
+
+        if (isVictory) {
+          this.saveLevelRank(this.currentLevel, plainRank);
+        }
+
+        // Format waktu bermain
+        const mins = String(Math.floor(this.elapsedSeconds / 60)).padStart(2, "0");
+        const secs = String(Math.floor(this.elapsedSeconds % 60)).padStart(2, "0");
+
+        document.getElementById("res-hero-emoji").textContent = isVictory ? "🏆" : "💫";
+        document.getElementById("res-title").textContent = isVictory
+          ? `Level ${this.currentLevel} Berhasil Ditaklukkan!`
+          : "Kesempatan Habis — Ayo Bangkit Lagi!";
+        document.getElementById("res-subtitle").textContent = isVictory
+          ? `Selamat ${this.playerName}! Kamu berhasil mencapai Kuil Finis Desa Ninja.`
+          : `Jangan menyerah ${this.playerName}! Setiap latihan membuat kemampuan pecahamu makin tajam.`;
+
+        document.getElementById("res-rank-title").textContent = rankTitle;
+        document.getElementById("res-score").textContent = this.score;
+        document.getElementById("res-coins").textContent = `🪙 ${this.coins}`;
+        document.getElementById("res-accuracy").textContent = `${accuracy}%`;
+        document.getElementById("res-correct").textContent = this.correctCount;
+        document.getElementById("res-wrong").textContent = this.wrongCount;
+        document.getElementById("res-time").textContent = `${mins}:${secs}`;
+
+        const nextBtn = document.getElementById("btn-next-level");
+        if (isVictory && this.currentLevel < 4) {
+          nextBtn.classList.remove("hidden");
+        } else {
+          nextBtn.classList.add("hidden");
+        }
+
+        UI.showScreen("screen-result");
+
+        // Dapatkan rekomendasi latihan dari AI Ninja Sensei / analisis lokal
+        const recEl = document.getElementById("res-recommendation");
+        const recBadge = document.getElementById("res-ai-badge");
+        recEl.textContent = "🧙‍♂️ Ninja Sensei sedang menganalisis hasil latihanmu...";
+
+        const recResult = await AISensei.getEndLevelRecommendation({
+          level: this.currentLevel,
+          correct: this.correctCount,
+          wrong: this.wrongCount,
+          accuracy,
+          mistakes: this.mistakeTypes
+        });
+
+        recEl.textContent = recResult.text;
+        recBadge.textContent = recResult.isAI ? "🤖 AI Ninja Sensei" : "📜 Evaluasi Sensei";
+      },
+
+      /**
+       * ======================================================================
+       * RENDER GRAFIK DUNIA DESA NINJA 2D DI CANVAS
+       * ======================================================================
+       */
+      render() {
+        const ctx = this.ctx;
+        const W = this.logicalWidth;
+        const H = this.logicalHeight;
+
+        ctx.clearRect(0, 0, W, H);
+
+        // 1. Langit Gradien Hangat
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, this.groundY);
+        skyGrad.addColorStop(0, "#38bdf8");
+        skyGrad.addColorStop(0.55, "#bae6fd");
+        skyGrad.addColorStop(1, "#fef3c7");
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, W, H);
+
+        // Matahari Pagi Jepang
+        ctx.fillStyle = "#fde047";
+        ctx.beginPath();
+        ctx.arc(W * 0.82, 82, 42, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2. Pegunungan Parallax (Gunung Fuji)
+        const fujiX = 360 - (this.cameraX * 0.12) % 900;
+        this.drawMountFuji(ctx, fujiX, this.groundY);
+        this.drawMountFuji(ctx, fujiX + 900, this.groundY);
+
+        // 3. Awan Bergerak
+        ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+        for (const c of this.clouds) {
+          const sx = c.x - this.cameraX * 0.35;
+          if (sx < -150 || sx > W + 150) continue;
+          this.drawCloud(ctx, sx, c.y, c.scale);
+        }
+
+        // 4. Bukit Hijau & Pohon Sakura Latar Belakang
+        ctx.fillStyle = "#4ade80";
+        ctx.beginPath();
+        ctx.moveTo(0, this.groundY);
+        for (let x = 0; x <= W + 100; x += 100) {
+          const worldHillX = x + this.cameraX * 0.45;
+          const hillH = Math.sin(worldHillX * 0.004) * 38 + 48;
+          ctx.lineTo(x, this.groundY - hillH);
+        }
+        ctx.lineTo(W, this.groundY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Pohon Sakura & Lentera Batu
+        for (let tx = 180; tx < this.worldLength; tx += 460) {
+          const sx = tx - this.cameraX * 0.75;
+          if (sx < -120 || sx > W + 120) continue;
+          this.drawSakuraTree(ctx, sx, this.groundY);
+        }
+
+        // 5. Tanah Utama & Rumput (dengan lubang jurang pada rintangan tipe chasm/river)
+        this.drawTerrain(ctx, W, H);
+
+        // 6. Platform Bambu Melayang
+        for (const plat of this.platforms) {
+          const sx = plat.x - this.cameraX;
+          if (sx + plat.w < -20 || sx > W + 20) continue;
+          this.drawBambooPlatform(ctx, sx, plat.y, plat.w, plat.h);
+        }
+
+        // 7. Rintangan (Jurang Bambu, Batu Segel, Sungai Koi, Gerbang Naga)
+        for (const obs of this.obstacles) {
+          const sx = obs.x - this.cameraX;
+          if (sx + obs.width < -60 || sx > W + 60) continue;
+          this.drawObstacle(ctx, sx, obs);
+        }
+
+        // 8. Kuil Garis Finis
+        const finishScreenX = this.finishX - this.cameraX;
+        if (finishScreenX < W + 200) {
+          this.drawFinishDojo(ctx, finishScreenX, this.groundY);
+        }
+
+        // 9. Koin Emas
+        const nowSec = performance.now() / 1000;
+        for (const coin of this.coinItems) {
+          if (coin.collected) continue;
+          const sx = coin.x - this.cameraX;
+          if (sx < -30 || sx > W + 30) continue;
+          const bobY = coin.y + Math.sin(nowSec * 5 + coin.bobOffset) * 5;
+          this.drawCoin(ctx, sx, bobY, coin.r, nowSec + coin.bobOffset);
+        }
+
+        // 10. Karakter Ninja Utama
+        this.drawNinja(ctx, this.ninja.x - this.cameraX, this.ninja.y);
+
+        // 11. Efek Partikel & Kelopak Sakura Terbang
+        for (const pt of this.particles) {
+          ctx.fillStyle = pt.color;
+          ctx.beginPath();
+          ctx.arc(pt.x - this.cameraX, pt.y, pt.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.fillStyle = "#f472b6";
+        for (const p of this.sakuraPetals) {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, p.size, p.size * 0.55, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      },
+
+      drawMountFuji(ctx, centerX, baseY) {
+        ctx.fillStyle = "#64748b";
+        ctx.beginPath();
+        ctx.moveTo(centerX - 240, baseY);
+        ctx.lineTo(centerX - 38, baseY - 235);
+        ctx.lineTo(centerX + 38, baseY - 235);
+        ctx.lineTo(centerX + 240, baseY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Puncak Salju
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.moveTo(centerX - 38, baseY - 235);
+        ctx.lineTo(centerX + 38, baseY - 235);
+        ctx.lineTo(centerX + 86, baseY - 172);
+        ctx.lineTo(centerX + 42, baseY - 188);
+        ctx.lineTo(centerX + 8, baseY - 165);
+        ctx.lineTo(centerX - 32, baseY - 186);
+        ctx.lineTo(centerX - 84, baseY - 170);
+        ctx.closePath();
+        ctx.fill();
+      },
+
+      drawCloud(ctx, x, y, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scale, scale);
+        ctx.beginPath();
+        ctx.arc(0, 0, 24, 0, Math.PI * 2);
+        ctx.arc(24, -6, 30, 0, Math.PI * 2);
+        ctx.arc(54, 0, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      },
+
+      drawSakuraTree(ctx, x, baseY) {
+        // Batang pohon
+        ctx.fillStyle = "#78350f";
+        ctx.fillRect(x - 8, baseY - 88, 16, 88);
+        // Tajuk bunga sakura merah muda
+        ctx.fillStyle = "#f9a8d4";
+        ctx.beginPath();
+        ctx.arc(x, baseY - 105, 42, 0, Math.PI * 2);
+        ctx.arc(x - 30, baseY - 88, 30, 0, Math.PI * 2);
+        ctx.arc(x + 30, baseY - 88, 30, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#f472b6";
+        ctx.beginPath();
+        ctx.arc(x - 10, baseY - 112, 22, 0, Math.PI * 2);
+        ctx.arc(x + 18, baseY - 96, 20, 0, Math.PI * 2);
+        ctx.fill();
+      },
+
+      drawTerrain(ctx, W, H) {
+        // Tanah coklat penuh di bawah
+        ctx.fillStyle = "#78350f";
+        ctx.fillRect(0, this.groundY, W, H - this.groundY);
+
+        // Lapisan rumput hijau di atas tanah
+        ctx.fillStyle = "#16a34a";
+        ctx.fillRect(0, this.groundY, W, 16);
+
+        // Lubangi jurang / sungai pada rintangan chasm & river
+        for (const obs of this.obstacles) {
+          if (obs.type === "chasm" || obs.type === "river") {
+            const sx = obs.x - this.cameraX;
+            ctx.fillStyle = "#0f172a";
+            ctx.fillRect(sx, this.groundY, obs.width, H - this.groundY);
+
+            if (obs.type === "river") {
+              // Air sungai biru
+              ctx.fillStyle = "#0284c7";
+              ctx.fillRect(sx, this.groundY + 26, obs.width, H - this.groundY);
+              ctx.fillStyle = "#7dd3fc";
+              ctx.fillRect(sx + 10, this.groundY + 34, obs.width - 20, 5);
+            } else {
+              // Bambu runcing di dasar jurang
+              ctx.fillStyle = "#65a30d";
+              for (let bx = sx + 12; bx < sx + obs.width - 10; bx += 22) {
+                ctx.beginPath();
+                ctx.moveTo(bx, H);
+                ctx.lineTo(bx + 8, this.groundY + 46);
+                ctx.lineTo(bx + 16, H);
+                ctx.closePath();
+                ctx.fill();
+              }
+            }
+
+            // Jika rintangan sudah terjawab, munculkan jembatan bambu bercahaya!
+            if (obs.solved) {
+              this.drawBambooPlatform(ctx, sx - 6, this.groundY - 2, obs.width + 12, 14);
+            }
+          }
+        }
+      },
+
+      drawBambooPlatform(ctx, x, y, w, h) {
+        ctx.fillStyle = "#15803d";
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, 7);
+        ctx.fill();
+
+        ctx.strokeStyle = "#bbf7d0";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Ruas bambu
+        ctx.fillStyle = "#14532d";
+        for (let rx = x + 28; rx < x + w - 12; rx += 32) {
+          ctx.fillRect(rx, y, 3, h);
+        }
+      },
+
+      drawObstacle(ctx, sx, obs) {
+        if (obs.type === "boulder" && !obs.solved) {
+          // Batu raksasa dengan segel gulungan merah
+          ctx.fillStyle = "#475569";
+          ctx.beginPath();
+          ctx.arc(sx + obs.width / 2, this.groundY - 36, 44, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#1e293b";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          // Segel kertas kuning
+          ctx.fillStyle = "#fef08a";
+          ctx.fillRect(sx + obs.width / 2 - 14, this.groundY - 56, 28, 40);
+          ctx.strokeStyle = "#dc2626";
+          ctx.strokeRect(sx + obs.width / 2 - 14, this.groundY - 56, 28, 40);
+          ctx.fillStyle = "#dc2626";
+          ctx.font = "bold 16px Fredoka, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("?", sx + obs.width / 2, this.groundY - 30);
+        } else if (obs.type === "gate" && !obs.solved) {
+          // Gerbang Torii Segel Merah
+          ctx.fillStyle = "#dc2626";
+          ctx.fillRect(sx + 24, this.groundY - 110, 12, 110);
+          ctx.fillRect(sx + obs.width - 36, this.groundY - 110, 12, 110);
+          ctx.fillRect(sx + 10, this.groundY - 114, obs.width - 20, 14);
+          ctx.fillRect(sx + 18, this.groundY - 90, obs.width - 36, 10);
+
+          // Penghalang energi pecahan
+          ctx.fillStyle = "rgba(251, 191, 36, 0.35)";
+          ctx.fillRect(sx + 36, this.groundY - 80, obs.width - 72, 80);
+        }
+
+        // Papan tanda nomor rintangan
+        ctx.fillStyle = obs.solved ? "#16a34a" : "#b45309";
+        ctx.fillRect(sx - 24, this.groundY - 34, 4, 34);
+        ctx.beginPath();
+        ctx.roundRect(sx - 36, this.groundY - 52, 28, 20, 5);
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 11px Nunito, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(obs.solved ? "✔" : `#${obs.index + 1}`, sx - 22, this.groundY - 38);
+      },
+
+      drawFinishDojo(ctx, sx, baseY) {
+        // Bangunan Kuil Dojo Ninja Finis
+        ctx.fillStyle = "#fef3c7";
+        ctx.fillRect(sx + 20, baseY - 120, 140, 120);
+        ctx.strokeStyle = "#92400e";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(sx + 20, baseY - 120, 140, 120);
+
+        // Pintu Dojo
+        ctx.fillStyle = "#78350f";
+        ctx.fillRect(sx + 68, baseY - 68, 44, 68);
+
+        // Atap Pagoda Merah Bertingkat
+        ctx.fillStyle = "#dc2626";
+        ctx.beginPath();
+        ctx.moveTo(sx, baseY - 118);
+        ctx.lineTo(sx + 90, baseY - 165);
+        ctx.lineTo(sx + 180, baseY - 118);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(sx + 24, baseY - 155);
+        ctx.lineTo(sx + 90, baseY - 192);
+        ctx.lineTo(sx + 156, baseY - 155);
+        ctx.closePath();
+        ctx.fill();
+
+        // Spanduk FINIS
+        ctx.fillStyle = "#f59e0b";
+        ctx.beginPath();
+        ctx.roundRect(sx + 48, baseY - 108, 84, 24, 6);
+        ctx.fill();
+        ctx.fillStyle = "#1e293b";
+        ctx.font = "bold 13px Fredoka, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("🏁 FINIS", sx + 90, baseY - 91);
+      },
+
+      drawCoin(ctx, x, y, r, phase) {
+        const scaleX = Math.max(0.35, Math.abs(Math.cos(phase * 2.5)));
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scaleX, 1);
+
+        ctx.fillStyle = "#f59e0b";
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#fde047";
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.72, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#b45309";
+        ctx.fillRect(-3, -3, 6, 6);
+        ctx.restore();
+      },
+
+      drawNinja(ctx, sx, sy) {
+        const n = this.ninja;
+        ctx.save();
+        ctx.translate(sx + n.w / 2, sy - n.h / 2);
+
+        if (n.hurtTimer > 0) {
+          ctx.translate(Math.sin(n.hurtTimer * 45) * 4, 0);
+        }
+
+        if (n.isHeroJumping) {
+          ctx.rotate(n.flipAngle);
+        }
+
+        ctx.scale(n.facing, 1);
+
+        // Kaki animasi lari
+        const legSwing = n.grounded ? Math.sin(n.runCycle) * 8 : 6;
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.roundRect(-11 + legSwing, 12, 8, 15, 4);
+        ctx.roundRect(3 - legSwing, 12, 8, 15, 4);
+        ctx.fill();
+
+        // Badan Ninja
+        ctx.fillStyle = "#1e293b";
+        ctx.beginPath();
+        ctx.roundRect(-14, -4, 28, 22, 8);
+        ctx.fill();
+
+        // Sabuk Merah
+        ctx.fillStyle = "#dc2626";
+        ctx.fillRect(-14, 8, 28, 5);
+
+        // Ujung Ikat Kepala Berkibar di Belakang
+        const tailWave = Math.sin(performance.now() / 110) * 4;
+        ctx.fillStyle = "#dc2626";
+        ctx.beginPath();
+        ctx.moveTo(-14, -18);
+        ctx.lineTo(-28, -22 + tailWave);
+        ctx.lineTo(-25, -13 + tailWave);
+        ctx.closePath();
+        ctx.fill();
+
+        // Kepala Ninja
+        ctx.fillStyle = "#1e293b";
+        ctx.beginPath();
+        ctx.arc(0, -16, 17, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Wajah
+        ctx.fillStyle = "#fed7aa";
+        ctx.beginPath();
+        ctx.roundRect(-11, -21, 24, 10, 5);
+        ctx.fill();
+
+        // Ikat Kepala Merah
+        ctx.fillStyle = "#dc2626";
+        ctx.fillRect(-17, -26, 34, 6);
+
+        // Mata
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.arc(-2, -16, 2.3, 0, Math.PI * 2);
+        ctx.arc(8, -16, 2.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+    };
+
+    // Inisialisasi aplikasi setelah seluruh DOM siap
+    window.addEventListener("DOMContentLoaded", () => {
+      Game.init();
+    });
+  </script>
+</body>
+</html>
